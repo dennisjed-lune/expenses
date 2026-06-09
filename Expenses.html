@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Expenses — Lune SDK</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Geist', -apple-system, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  button, input { font-family: inherit; }
+  .exp-screens::-webkit-scrollbar { width: 0; display: none; }
+  .exp-screens { scrollbar-width: none; }
+
+  /* Screen push/pop transitions */
+  .slide-fwd { animation: slideFwd .36s cubic-bezier(.22,1,.36,1); }
+  .slide-back { animation: slideBack .3s ease; }
+  @keyframes slideFwd { from { transform: translateX(30px); opacity: 0 } to { transform: translateX(0); opacity: 1 } }
+  @keyframes slideBack { from { transform: translateX(-22px); opacity: 0 } to { transform: translateX(0); opacity: 1 } }
+
+  /* Chart entrance — true size is the base style; entrance is pure transform/opacity
+     so layout never depends on JS timing (the fix the designer landed on). */
+  @keyframes donutIn { from { opacity: 0; transform: rotate(-90deg) scale(.92) } to { opacity: 1; transform: rotate(-90deg) scale(1) } }
+  @keyframes growX { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+  @keyframes growY { from { transform: scaleY(0) } to { transform: scaleY(1) } }
+
+  @media (prefers-reduced-motion: reduce) { .slide-fwd, .slide-back { animation: none; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+
+<script type="text/babel" data-presets="react">
+/* ===================================================================
+   Lune SDK — Expenses module (iOS), self-contained prototype.
+
+   Reskin/relayout over the existing endpoints (no backend changes):
+     /categories/spend?is_spend=true  -> { total, spend:[CategorySpend] }
+     /transactions?is_spend=true      -> [LuneTransaction]
+
+   Everything below lives in one file so it opens by double-clicking and
+   drops into a web view as-is. To wire to the real SDK, replace EXP_DATA
+   with the two endpoint responses — the component tree reads only the shape.
+   =================================================================== */
+
+const { useState, useMemo, useRef, useEffect, useCallback, Fragment } = React;
+
+/* ============================ DATA ============================ */
+const EXP_DATA = (function () {
+  const CATEGORIES = [
+    { id: 1, name: 'Groceries',          color: '#3B7A57', glyph: 'cart'   },
+    { id: 2, name: 'Dining & Cafés',     color: '#C2683D', glyph: 'dining' },
+    { id: 3, name: 'Shopping',           color: '#8E5AA6', glyph: 'bag'    },
+    { id: 4, name: 'Transport',          color: '#3E6FB0', glyph: 'car'    },
+    { id: 5, name: 'Bills & Utilities',  color: '#566273', glyph: 'bill'   },
+    { id: 6, name: 'Travel',             color: '#2F9C95', glyph: 'plane'  },
+    { id: 7, name: 'Health & Beauty',    color: '#B5546A', glyph: 'health' },
+    { id: 8, name: 'Entertainment',      color: '#C2992E', glyph: 'play'   },
+  ];
+
+  const BRANDS = {
+    1: [
+      { name: 'Carrefour',        total: 1284.40, count: 9 },
+      { name: 'Spinneys',         total:  962.10, count: 6 },
+      { name: 'Lulu Hypermarket', total:  548.75, count: 5 },
+      { name: 'Waitrose',         total:  301.20, count: 3 },
+      { name: 'Organic Foods',    total:  168.90, count: 2 },
+    ],
+    2: [
+      { name: 'Talabat',          total:  742.30, count: 14 },
+      { name: 'Starbucks',        total:  388.00, count: 11 },
+      { name: 'Shake Shack',      total:  246.50, count: 4 },
+      { name: 'Pret A Manger',    total:  198.75, count: 6 },
+      { name: 'Allo Beirut',      total:  412.60, count: 5 },
+      { name: 'Zomato',           total:  191.40, count: 3 },
+    ],
+    3: [
+      { name: 'Noon',             total:  984.20, count: 6 },
+      { name: 'Amazon.ae',        total:  712.55, count: 5 },
+      { name: 'Apple Store',      total:  749.00, count: 1 },
+      { name: 'Sharaf DG',        total:  318.40, count: 2 },
+      { name: 'Namshi',           total:  201.30, count: 3 },
+    ],
+    4: [
+      { name: 'Careem',           total:  486.90, count: 18 },
+      { name: 'ADNOC',            total:  420.00, count: 6 },
+      { name: 'Salik',            total:  224.00, count: 14 },
+      { name: 'RTA Nol',          total:  186.50, count: 9 },
+      { name: 'ENOC',             total:  152.30, count: 2 },
+    ],
+    5: [
+      { name: 'DEWA',             total: 742.85, count: 1 },
+      { name: 'du',               total: 389.00, count: 1 },
+      { name: 'Etisalat',         total: 525.00, count: 1 },
+      { name: 'Salik Recharge',   total: 200.00, count: 2 },
+      { name: 'Tabby',            total: 312.40, count: 2 },
+    ],
+    6: [
+      { name: 'Emirates',         total: 2480.00, count: 1 },
+      { name: 'Booking.com',      total:  864.50, count: 1 },
+      { name: 'Careem (airport)', total:  142.00, count: 2 },
+    ],
+    7: [
+      { name: 'Aster Pharmacy',   total: 214.60, count: 4 },
+      { name: 'Fitness First',    total: 350.00, count: 1 },
+      { name: 'The Grooming Co.', total: 180.00, count: 2 },
+      { name: 'Faces',            total: 246.90, count: 2 },
+    ],
+    8: [
+      { name: 'Netflix',          total:  56.99, count: 1 },
+      { name: 'Spotify',          total:  19.99, count: 1 },
+      { name: 'VOX Cinemas',      total: 184.00, count: 3 },
+      { name: 'OSN+',             total:  99.00, count: 1 },
+      { name: 'PlayStation',      total: 229.00, count: 2 },
+    ],
+  };
+
+  const MERCHANT_CAT = {};
+  Object.keys(BRANDS).forEach((cid) => {
+    BRANDS[cid].forEach((b) => { MERCHANT_CAT[b.name] = Number(cid); });
+  });
+
+  const CATEGORY_SPEND = CATEGORIES.map((c) => {
+    const bs = BRANDS[c.id] || [];
+    const total = bs.reduce((s, b) => s + b.total, 0);
+    const count = bs.reduce((s, b) => s + b.count, 0);
+    return { ...c, total: Math.round(total * 100) / 100, count, brands: bs.slice().sort((a, b) => b.total - a.total) };
+  }).sort((a, b) => b.total - a.total);
+
+  const TOTAL = Math.round(CATEGORY_SPEND.reduce((s, c) => s + c.total, 0) * 100) / 100;
+  const PREV = { 1: 3010, 2: 2456, 3: 2510, 4: 1602, 5: 1980, 6: 2890, 7: 1124, 8: 720 };
+
+  const DAYS = ['01','02','03','04','05','06','07','08','09','10','11','12','13','14',
+    '15','16','17','18','19','20','21','22','23','24','25','26','27','28'];
+  const fmtDate = (d) => `${d} May 2026`;
+
+  const RAW = [
+    { m: 'Carrefour',     a: 248.60, d: '27' },
+    { m: 'Careem',        a:  34.50, d: '27' },
+    { m: 'Starbucks',     a:  29.00, d: '26' },
+    { m: 'Talabat',       a:  72.40, d: '26' },
+    { m: 'Noon',          a: 318.90, d: '25' },
+    { m: 'Salik',         a:   8.00, d: '25' },
+    { m: 'Spinneys',      a: 196.30, d: '24' },
+    { m: 'Apple Store',   a: 749.00, d: '23', savings: 0 },
+    { m: 'Emirates',      a: 2480.00, d: '22' },
+    { m: 'Shake Shack',   a:  84.00, d: '21' },
+    { m: 'ADNOC',         a: 120.00, d: '21' },
+    { m: 'Netflix',       a:  56.99, d: '20' },
+    { m: 'Talabat',       a:  53.80, d: '20' },
+    { m: 'DEWA',          a: 742.85, d: '19' },
+    { m: 'Careem',        a:  41.20, d: '19' },
+    { m: 'Lulu Hypermarket', a: 134.55, d: '18' },
+    { m: 'Pret A Manger', a:  38.50, d: '18' },
+    { m: 'Amazon.ae',     a: 212.30, d: '17' },
+    { m: 'VOX Cinemas',   a:  92.00, d: '16' },
+    { m: 'Allo Beirut',   a: 156.00, d: '15' },
+    { m: 'Fitness First', a: 350.00, d: '14' },
+    { m: 'Spinneys',      a: 221.80, d: '13' },
+    { m: 'Careem',        a:  27.50, d: '12' },
+    { m: 'Etisalat',      a: 525.00, d: '11' },
+    { m: 'Starbucks',     a:  24.00, d: '10' },
+    { m: 'Sharaf DG',     a: 318.40, d: '09' },
+    { m: 'Booking.com',   a: 864.50, d: '08' },
+    { m: 'Aster Pharmacy', a: 64.60, d: '07' },
+    { m: 'Carrefour',     a: 312.10, d: '06' },
+    { m: 'Talabat',       a:  61.20, d: '05' },
+    { m: 'Namshi',        a: 201.30, d: '04' },
+    { m: 'du',            a: 389.00, d: '03' },
+    { m: 'Careem',        a:  38.00, d: '02' },
+    { m: 'PlayStation',   a: 229.00, d: '01' },
+  ];
+
+  let tid = 1000;
+  const TRANSACTIONS = RAW.map((r) => {
+    const cid = MERCHANT_CAT[r.m] || 1;
+    const cat = CATEGORIES.find((c) => c.id === cid);
+    return {
+      id: ++tid, merchant: r.m, categoryId: cid, category: cat.name,
+      categoryColor: cat.color, glyph: cat.glyph, amount: r.a,
+      date: fmtDate(r.d), day: r.d, savings: r.savings,
+    };
+  });
+
+  function txnsForCategory(cid) {
+    const real = TRANSACTIONS.filter((t) => t.categoryId === cid);
+    const cat = CATEGORIES.find((c) => c.id === cid);
+    const bs = BRANDS[cid] || [];
+    const extra = [];
+    let seed = cid * 97;
+    bs.forEach((b) => {
+      const have = real.filter((t) => t.merchant === b.name).length;
+      const want = Math.min(b.count, 6);
+      for (let i = have; i < want; i++) {
+        seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+        const frac = (seed % 1000) / 1000;
+        const amt = Math.max(8, Math.round((b.total / Math.max(b.count, 1)) * (0.6 + frac * 0.8) * 100) / 100);
+        const day = DAYS[seed % DAYS.length];
+        extra.push({
+          id: ++tid, merchant: b.name, categoryId: cid, category: cat.name,
+          categoryColor: cat.color, glyph: cat.glyph, amount: amt, date: fmtDate(day), day,
+        });
+      }
+    });
+    return [...real, ...extra].sort((a, b) => Number(b.day) - Number(a.day));
+  }
+
+  return {
+    CATEGORIES, BRANDS, CATEGORY_SPEND, TOTAL, PREV, TRANSACTIONS, MERCHANT_CAT, txnsForCategory,
+    PERIODS: ['This month', 'Last month', 'Last 3 months', 'This year'],
+    CURRENT_PERIOD: 'This month',
+    DATE_LABEL: '1 – 28 May 2026',
+  };
+})();
+
+/* ============================ ICONS / IDENTITY ============================ */
+function hexA(hex, a) {
+  const h = hex.replace('#', '');
+  const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
+  const r = (n >> 16) & 255, gr = (n >> 8) & 255, b = n & 255;
+  return `rgba(${r},${gr},${b},${a})`;
+}
+
+function CatGlyph({ glyph, size = 20, stroke = 'currentColor', sw = 1.7 }) {
+  const p = { fill: 'none', stroke, strokeWidth: sw, strokeLinecap: 'round', strokeLinejoin: 'round' };
+  const paths = {
+    cart:   <g {...p}><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.2 11.3a1.5 1.5 0 0 0 1.5 1.2h8.3a1.5 1.5 0 0 0 1.5-1.2L20 7H6"/></g>,
+    dining: <g {...p}><path d="M5 2v8a2 2 0 0 0 2 2 2 2 0 0 0 2-2V2M7 2v20M17 2c-1.5 0-2.5 2-2.5 5s1 4 2.5 4M17 2v20"/></g>,
+    bag:    <g {...p}><path d="M5 8h14l-1 13H6L5 8Z"/><path d="M8.5 8V6a3.5 3.5 0 0 1 7 0v2"/></g>,
+    car:    <g {...p}><path d="M3 13l1.8-5a2 2 0 0 1 1.9-1.3h8.6A2 2 0 0 1 17.2 8L19 13M3 13h18v4a1 1 0 0 1-1 1h-1.5a1 1 0 0 1-1-1v-1H6.5v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-4Z"/><circle cx="7" cy="15.5" r=".6"/><circle cx="17" cy="15.5" r=".6"/></g>,
+    bill:   <g {...p}><path d="M13 2L4 13h7l-2 9 9-12h-7l2-8Z"/></g>,
+    plane:  <g {...p}><path d="M21 14.5l-8.5-2.2V5a1.5 1.5 0 0 0-3 0v7.3L1 14.5v2l8.5-1.3V19l-2.5 1.5v1.5l4-1 4 1v-1.5L12.5 19v-3.8L21 16.5v-2Z"/></g>,
+    health: <g {...p}><path d="M12 21s-7-4.3-9.2-9C1.4 9 3 5.5 6.3 5.5c2 0 3.2 1.1 4 2.3.8-1.2 2-2.3 4-2.3 3.3 0 4.9 3.5 3.5 6.5C19 16.7 12 21 12 21Z"/></g>,
+    play:   <g {...p}><circle cx="12" cy="12" r="9.5"/><path d="M10 8.5l6 3.5-6 3.5v-7Z"/></g>,
+  };
+  return <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: 'block' }}>{paths[glyph] || paths.bag}</svg>;
+}
+
+const BRAND_COLORS = {
+  'Carrefour': '#004E9F', 'Spinneys': '#E4002B', 'Lulu Hypermarket': '#ED1C24',
+  'Waitrose': '#5A8F3D', 'Organic Foods': '#6FA63C',
+  'Talabat': '#FF5A00', 'Starbucks': '#00704A', 'Shake Shack': '#5BB749',
+  'Pret A Manger': '#7A1530', 'Allo Beirut': '#C8102E', 'Zomato': '#E23744',
+  'Noon': '#FEEE00', 'Amazon.ae': '#FF9900', 'Apple Store': '#1D1D1F',
+  'Sharaf DG': '#00529B', 'Namshi': '#1A1A1A',
+  'Careem': '#4BB543', 'ADNOC': '#005EB8', 'Salik': '#E11B22', 'RTA Nol': '#C8102E',
+  'ENOC': '#0072CE', 'Careem (airport)': '#4BB543',
+  'DEWA': '#00833E', 'du': '#EF3E42', 'Etisalat': '#9B1E26', 'Salik Recharge': '#E11B22',
+  'Tabby': '#3DDC97',
+  'Emirates': '#D71921', 'Booking.com': '#003580',
+  'Aster Pharmacy': '#00A859', 'Fitness First': '#E4002B', 'The Grooming Co.': '#2C2C2C',
+  'Faces': '#000000',
+  'Netflix': '#E50914', 'Spotify': '#1DB954', 'VOX Cinemas': '#E2231A',
+  'OSN+': '#1B1340', 'PlayStation': '#003791',
+};
+const NOON_YELLOW_TEXT = new Set(['Noon']);
+const brandColor = (name) => BRAND_COLORS[name] || '#4B5563';
+function initials(name) {
+  const clean = name.replace(/\(.*?\)/g, '').replace(/[^A-Za-z0-9 ]/g, '').trim();
+  const parts = clean.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
+function MerchantMark({ name, glyph, catColor, size = 44, radius = 13, showLogos = true, dark = false }) {
+  if (showLogos) {
+    const bg = brandColor(name);
+    const fg = NOON_YELLOW_TEXT.has(name) ? '#1A1A1A' : '#fff';
+    return (
+      <div style={{
+        width: size, height: size, borderRadius: radius, background: bg,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        color: fg, fontWeight: 600, fontSize: size * 0.33, letterSpacing: '-0.02em',
+        boxShadow: dark ? 'inset 0 0 0 1px rgba(255,255,255,0.08)' : 'inset 0 0 0 1px rgba(0,0,0,0.04)',
+      }}>{initials(name)}</div>
+    );
+  }
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: radius, background: hexA(catColor, dark ? 0.20 : 0.12),
+      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: catColor,
+    }}>
+      <CatGlyph glyph={glyph} size={size * 0.46} sw={1.8} />
+    </div>
+  );
+}
+
+function CategoryMark({ glyph, color, size = 44, radius = 13, dark = false, solid = false }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: radius,
+      background: solid ? color : hexA(color, dark ? 0.22 : 0.13),
+      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      color: solid ? '#fff' : color,
+    }}>
+      <CatGlyph glyph={glyph} size={size * 0.46} sw={1.8} />
+    </div>
+  );
+}
+
+function UIIcon({ name, size = 20, stroke = 'currentColor', sw = 1.8 }) {
+  const p = { fill: 'none', stroke, strokeWidth: sw, strokeLinecap: 'round', strokeLinejoin: 'round' };
+  const g = {
+    chevR:    <path d="M9 6l6 6-6 6" {...p}/>,
+    chevL:    <path d="M15 6l-6 6 6 6" {...p}/>,
+    chevD:    <path d="M6 9l6 6 6-6" {...p}/>,
+    search:   <g {...p}><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></g>,
+    sort:     <g {...p}><path d="M7 4v16M7 4L4 7M7 4l3 3M17 20V4M17 20l3-3M17 20l-3-3"/></g>,
+    trend:    <g {...p}><path d="M3 17l5-5 4 3 8-9"/><path d="M20 6h-4M20 6v4"/></g>,
+    calendar: <g {...p}><rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></g>,
+    close:    <path d="M6 6l12 12M18 6L6 18" {...p}/>,
+    filter:   <g {...p}><path d="M3 5h18M6 12h12M10 19h4"/></g>,
+    arrowUp:  <g {...p}><path d="M12 19V5M12 5l-6 6M12 5l6 6"/></g>,
+    arrowDn:  <g {...p}><path d="M12 5v14M12 19l-6-6M12 19l6-6"/></g>,
+    sparkles: <g {...p}><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3Z"/></g>,
+    dots:     <g fill={stroke}><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></g>,
+  };
+  return <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: 'block' }}>{g[name]}</svg>;
+}
+
+/* ============================ CHARTS ============================ */
+function fmtAED(n, withDec = false) {
+  const v = withDec ? n.toFixed(2) : Math.round(n);
+  return Number(v).toLocaleString('en-US', { minimumFractionDigits: withDec ? 2 : 0, maximumFractionDigits: withDec ? 2 : 0 });
+}
+
+function Donut({ data, total, size = 200, thickness = 26, dark = false, onSlice, activeId, ink, muted }) {
+  const r = (size - thickness) / 2;
+  const cx = size / 2, cy = size / 2;
+  const C = 2 * Math.PI * r;
+  let acc = 0;
+  const gap = 0.012;
+  const segs = data.map((d) => { const frac = d.total / total; const seg = { ...d, start: acc, frac }; acc += frac; return seg; });
+  return (
+    <div style={{ position: 'relative', width: size, height: size }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: 'rotate(-90deg)', animation: 'donutIn .7s cubic-bezier(.22,1,.36,1) both' }}>
+        {segs.map((s) => {
+          const len = Math.max(0.0001, (s.frac - gap)) * C;
+          const dim = activeId != null && activeId !== s.id;
+          return (
+            <circle key={s.id} cx={cx} cy={cy} r={r} fill="none"
+              stroke={s.color} strokeWidth={activeId === s.id ? thickness + 4 : thickness}
+              strokeDasharray={`${len} ${C}`} strokeDashoffset={-s.start * C} strokeLinecap="round"
+              opacity={dim ? 0.28 : 1} onClick={() => onSlice && onSlice(s.id)}
+              style={{ transition: 'opacity .25s, stroke-width .2s', cursor: onSlice ? 'pointer' : 'default' }} />
+          );
+        })}
+      </svg>
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: muted }}>Total spent</div>
+        <div style={{ fontSize: size * 0.16, fontWeight: 680, color: ink, marginTop: 3, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>{fmtAED(total)}</div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: muted, marginTop: 1 }}>AED</div>
+      </div>
+    </div>
+  );
+}
+
+function RankedBars({ data, total, dark = false, onBar, ink, muted, showAmount = true, max }) {
+  const peak = max || Math.max(...data.map((d) => d.total));
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {data.map((d, i) => {
+        const pct = (d.total / peak) * 100;
+        const share = Math.round((d.total / total) * 100);
+        return (
+          <div key={d.id ?? d.name} onClick={() => onBar && onBar(d)} style={{ cursor: onBar ? 'pointer' : 'default' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 7 }}>
+              <span style={{ fontSize: 14.5, fontWeight: 560, color: ink }}>{d.name}</span>
+              <span style={{ fontSize: 13.5, fontWeight: 600, color: ink, fontVariantNumeric: 'tabular-nums' }}>{showAmount ? `AED ${fmtAED(d.total)}` : `${share}%`}</span>
+            </div>
+            <div style={{ height: 9, borderRadius: 999, background: dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${pct}%`, background: d.color, borderRadius: 999, transformOrigin: 'left center', animation: `growX .75s cubic-bezier(.22,1,.36,1) ${i * 0.05}s both` }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function StackedBar({ data, total, dark = false, onSeg, ink, muted }) {
+  return (
+    <div>
+      <div style={{ display: 'flex', height: 46, borderRadius: 14, overflow: 'hidden', gap: 3 }}>
+        {data.map((d, i) => {
+          const pct = (d.total / total) * 100;
+          return (
+            <div key={d.id} onClick={() => onSeg && onSeg(d.id)} title={d.name}
+              style={{ width: `${pct}%`, background: d.color, height: '100%', borderRadius: 7, cursor: onSeg ? 'pointer' : 'default', minWidth: 4, transformOrigin: 'left center', animation: `growX .7s cubic-bezier(.22,1,.36,1) ${i * 0.04}s both` }} />
+          );
+        })}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 18px', marginTop: 18 }}>
+        {data.map((d) => {
+          const share = Math.round((d.total / total) * 100);
+          return (
+            <div key={d.id} onClick={() => onSeg && onSeg(d.id)} style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: onSeg ? 'pointer' : 'default' }}>
+              <span style={{ width: 9, height: 9, borderRadius: 3, background: d.color, flexShrink: 0 }} />
+              <span style={{ fontSize: 13, color: ink, fontWeight: 520, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.name}</span>
+              <span style={{ fontSize: 12.5, color: muted, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{share}%</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ColumnTrend({ values, labels, color, dark = false, ink, muted, height = 120 }) {
+  const peak = Math.max(...values);
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height }}>
+      {values.map((v, i) => {
+        const h = (v / peak) * (height - 22);
+        const isLast = i === values.length - 1;
+        return (
+          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
+            <div style={{ width: '100%', maxWidth: 38, height: h, borderRadius: 7, background: isLast ? color : (dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)'), transformOrigin: 'bottom center', animation: `growY .7s cubic-bezier(.22,1,.36,1) ${i * 0.06}s both` }} />
+            <span style={{ fontSize: 10.5, color: muted, marginTop: 8, fontWeight: 520 }}>{labels[i]}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ============================ THEME + UI PRIMITIVES ============================ */
+function makeTheme(dark, accent) {
+  return dark ? {
+    dark: true, accent,
+    bg: '#0D0E11', surface: '#17181C', surfaceAlt: '#1F2127', sunken: '#101116',
+    ink: '#F4F4F6', muted: '#8E919A', faint: 'rgba(255,255,255,0.07)',
+    line: 'rgba(255,255,255,0.08)', cardShadow: '0 1px 0 rgba(255,255,255,0.03)',
+  } : {
+    dark: false, accent,
+    bg: '#F4F3F0', surface: '#FFFFFF', surfaceAlt: '#FAF9F7', sunken: '#EEEDEA',
+    ink: '#17181C', muted: '#73767E', faint: 'rgba(0,0,0,0.05)',
+    line: 'rgba(0,0,0,0.07)', cardShadow: '0 1px 2px rgba(20,22,28,0.04), 0 6px 20px rgba(20,22,28,0.045)',
+  };
+}
+
+function Screen({ T, children, pad = true }) {
+  return (
+    <div style={{ minHeight: '100%', background: T.bg, color: T.ink, paddingBottom: 44 }}>
+      <div style={{ padding: pad ? '0 18px' : 0 }}>{children}</div>
+    </div>
+  );
+}
+
+function Card({ T, children, style = {}, onClick, pad = 18 }) {
+  return (
+    <div onClick={onClick} style={{
+      background: T.surface, borderRadius: 22, padding: pad, boxShadow: T.cardShadow,
+      border: T.dark ? `1px solid ${T.line}` : 'none', cursor: onClick ? 'pointer' : 'default', ...style,
+    }}>{children}</div>
+  );
+}
+
+function SectionTitle({ T, children, action, onAction }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '26px 2px 13px' }}>
+      <h2 style={{ margin: 0, fontSize: 17, fontWeight: 640, letterSpacing: '-0.01em', color: T.ink }}>{children}</h2>
+      {action && (
+        <button onClick={onAction} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: T.accent, letterSpacing: '-0.01em' }}>{action}</button>
+      )}
+    </div>
+  );
+}
+
+function PeriodPill({ T, period, onClick, inline }) {
+  return (
+    <button onClick={onClick} style={{
+      display: 'inline-flex', alignItems: 'center', gap: 7, cursor: 'pointer',
+      background: T.surface, border: `1px solid ${T.line}`, borderRadius: 999,
+      padding: '8px 13px', marginTop: inline ? 0 : 14, color: T.ink, fontSize: 13.5, fontWeight: 580,
+      boxShadow: T.dark ? 'none' : T.cardShadow,
+    }}>
+      <span style={{ color: T.accent, display: 'flex' }}><UIIcon name="calendar" size={16} stroke={T.accent} /></span>
+      {period}
+      <UIIcon name="chevD" size={15} stroke={T.muted} />
+    </button>
+  );
+}
+
+function AppHeader({ T, title, eyebrow, onBack, onPeriod, period, right }) {
+  return (
+    <div style={{ paddingTop: onBack ? 8 : 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 40 }}>
+        {onBack && (
+          <button onClick={onBack} aria-label="Back" style={{
+            width: 38, height: 38, borderRadius: 12, flexShrink: 0, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: T.surface, border: `1px solid ${T.line}`, color: T.ink, boxShadow: T.dark ? 'none' : T.cardShadow,
+          }}><UIIcon name="chevL" size={20} /></button>
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {eyebrow && <div style={{ fontSize: 12.5, fontWeight: 600, color: T.muted, letterSpacing: '0.01em' }}>{eyebrow}</div>}
+          <div style={{ fontSize: 25, fontWeight: 700, letterSpacing: '-0.025em', color: T.ink, lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</div>
+        </div>
+        {right}
+      </div>
+      {onPeriod && <PeriodPill T={T} period={period} onClick={onPeriod} />}
+    </div>
+  );
+}
+
+function TxnRow({ T, txn, showLogos, onClick, showCategory = true, divider }) {
+  return (
+    <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '11px 0', cursor: onClick ? 'pointer' : 'default', position: 'relative' }}>
+      <MerchantMark name={txn.merchant} glyph={txn.glyph} catColor={txn.categoryColor} showLogos={showLogos} dark={T.dark} size={42} radius={12} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 15, fontWeight: 560, color: T.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{txn.merchant}</div>
+        <div style={{ fontSize: 12.5, color: T.muted, marginTop: 2 }}>{showCategory ? txn.category : txn.date}</div>
+      </div>
+      <div style={{ textAlign: 'right' }}>
+        <div style={{ fontSize: 15, fontWeight: 600, color: T.ink, fontVariantNumeric: 'tabular-nums' }}>{fmtAED(txn.amount, txn.amount % 1 !== 0)}</div>
+        <div style={{ fontSize: 11.5, color: T.muted, marginTop: 2 }}>{showCategory ? txn.day + ' May' : 'AED'}</div>
+      </div>
+      {divider && <div style={{ position: 'absolute', left: 55, right: 0, bottom: 0, height: 1, background: T.faint }} />}
+    </div>
+  );
+}
+
+function CategoryRow({ T, cat, total, onClick, divider, mode = 'amount' }) {
+  const share = Math.round((cat.total / total) * 100);
+  return (
+    <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '12px 0', cursor: 'pointer', position: 'relative' }}>
+      <CategoryMark glyph={cat.glyph} color={cat.color} dark={T.dark} size={42} radius={12} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
+          <span style={{ fontSize: 15, fontWeight: 560, color: T.ink }}>{cat.name}</span>
+          <span style={{ fontSize: 15, fontWeight: 620, color: T.ink, fontVariantNumeric: 'tabular-nums' }}>AED {fmtAED(cat.total)}</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 7 }}>
+          <div style={{ flex: 1, height: 5, borderRadius: 999, background: T.dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${share}%`, background: cat.color, borderRadius: 999 }} />
+          </div>
+          <span style={{ fontSize: 12, color: T.muted, fontWeight: 540, width: 64, textAlign: 'right' }}>
+            {mode === 'amount' ? `${cat.count} txns` : `${share}%`}
+          </span>
+        </div>
+      </div>
+      {divider && <div style={{ position: 'absolute', left: 55, right: 0, bottom: 0, height: 1, background: T.faint }} />}
+    </div>
+  );
+}
+
+function Sheet({ T, open, onClose, children, title, height = 'auto' }) {
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 200, pointerEvents: open ? 'auto' : 'none' }}>
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', opacity: open ? 1 : 0, transition: 'opacity .3s' }} />
+      <div style={{
+        position: 'absolute', left: 0, right: 0, bottom: 0, background: T.bg,
+        borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '88%', height,
+        transform: open ? 'translateY(0)' : 'translateY(102%)',
+        transition: 'transform .42s cubic-bezier(.22,1,.36,1)',
+        display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 -10px 40px rgba(0,0,0,0.25)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 18px 10px' }}>
+          <div style={{ fontSize: 18, fontWeight: 680, color: T.ink, letterSpacing: '-0.02em' }}>{title}</div>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 999, border: 'none', cursor: 'pointer', background: T.faint, color: T.muted, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <UIIcon name="close" size={16} stroke={T.muted} />
+          </button>
+        </div>
+        <div style={{ overflow: 'auto', padding: '0 18px 26px' }}>{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function SortBar({ T, value, dir, onChange }) {
+  const opt = (key, label) => {
+    const active = value === key;
+    return (
+      <button onClick={() => onChange(key)} style={{
+        display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer',
+        border: `1px solid ${active ? 'transparent' : T.line}`, borderRadius: 999, padding: '7px 13px',
+        background: active ? T.accent : T.surface, color: active ? '#fff' : T.ink, fontSize: 13, fontWeight: 580,
+      }}>
+        {label}
+        {active && <span style={{ display: 'flex' }}><UIIcon name={dir === 'asc' ? 'arrowUp' : 'arrowDn'} size={14} stroke="#fff" /></span>}
+      </button>
+    );
+  };
+  return <div style={{ display: 'flex', gap: 9 }}>{opt('amount', 'Amount')}{opt('name', 'Name')}{opt('count', 'Frequency')}</div>;
+}
+
+/* ============================ iOS DEVICE FRAME ============================ */
+function IOSStatusBar({ dark = false, time = '9:41' }) {
+  const c = dark ? '#fff' : '#000';
+  return (
+    <div style={{ display: 'flex', gap: 154, alignItems: 'center', justifyContent: 'center', padding: '21px 24px 19px', boxSizing: 'border-box', position: 'relative', zIndex: 20, width: '100%' }}>
+      <div style={{ flex: 1, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 1.5 }}>
+        <span style={{ fontFamily: '-apple-system, "SF Pro", system-ui', fontWeight: 590, fontSize: 17, lineHeight: '22px', color: c }}>{time}</span>
+      </div>
+      <div style={{ flex: 1, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, paddingTop: 1, paddingRight: 1 }}>
+        <svg width="19" height="12" viewBox="0 0 19 12">
+          <rect x="0" y="7.5" width="3.2" height="4.5" rx="0.7" fill={c}/><rect x="4.8" y="5" width="3.2" height="7" rx="0.7" fill={c}/>
+          <rect x="9.6" y="2.5" width="3.2" height="9.5" rx="0.7" fill={c}/><rect x="14.4" y="0" width="3.2" height="12" rx="0.7" fill={c}/>
+        </svg>
+        <svg width="17" height="12" viewBox="0 0 17 12">
+          <path d="M8.5 3.2C10.8 3.2 12.9 4.1 14.4 5.6L15.5 4.5C13.7 2.7 11.2 1.5 8.5 1.5C5.8 1.5 3.3 2.7 1.5 4.5L2.6 5.6C4.1 4.1 6.2 3.2 8.5 3.2Z" fill={c}/>
+          <path d="M8.5 6.8C9.9 6.8 11.1 7.3 12 8.2L13.1 7.1C11.8 5.9 10.2 5.1 8.5 5.1C6.8 5.1 5.2 5.9 3.9 7.1L5 8.2C5.9 7.3 7.1 6.8 8.5 6.8Z" fill={c}/>
+          <circle cx="8.5" cy="10.5" r="1.5" fill={c}/>
+        </svg>
+        <svg width="27" height="13" viewBox="0 0 27 13">
+          <rect x="0.5" y="0.5" width="23" height="12" rx="3.5" stroke={c} strokeOpacity="0.35" fill="none"/>
+          <rect x="2" y="2" width="20" height="9" rx="2" fill={c}/>
+          <path d="M25 4.5V8.5C25.8 8.2 26.5 7.2 26.5 6.5C26.5 5.8 25.8 4.8 25 4.5Z" fill={c} fillOpacity="0.4"/>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+function IOSDevice({ children, width = 402, height = 874, dark = false }) {
+  return (
+    <div style={{
+      width, height, borderRadius: 48, overflow: 'hidden', position: 'relative',
+      background: dark ? '#000' : '#F2F2F7',
+      boxShadow: '0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.12)',
+      fontFamily: '-apple-system, system-ui, sans-serif', WebkitFontSmoothing: 'antialiased',
+    }}>
+      <div style={{ position: 'absolute', top: 11, left: '50%', transform: 'translateX(-50%)', width: 126, height: 37, borderRadius: 24, background: '#000', zIndex: 50 }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 }}><IOSStatusBar dark={dark} /></div>
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1, overflow: 'auto' }}>{children}</div>
+      </div>
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 60, height: 34, display: 'flex', justifyContent: 'center', alignItems: 'flex-end', paddingBottom: 8, pointerEvents: 'none' }}>
+        <div style={{ width: 139, height: 5, borderRadius: 100, background: dark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.25)' }} />
+      </div>
+    </div>
+  );
+}
+
+/* ============================ MAIN SCREENS ============================ */
+function BreakdownHero({ T, direction, onCategory, onViewAll }) {
+  const { CATEGORY_SPEND, TOTAL, PREV } = EXP_DATA;
+  const prevTotal = Object.values(PREV).reduce((a, b) => a + b, 0);
+  const delta = Math.round(((TOTAL - prevTotal) / prevTotal) * 100);
+  const up = delta >= 0;
+  const top = CATEGORY_SPEND.slice(0, 5);
+
+  const deltaChip = (
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5, fontWeight: 600,
+      color: up ? (T.dark ? '#FF8E8E' : '#C2402F') : (T.dark ? '#7FD6A6' : '#2E7D52'),
+      background: up ? (T.dark ? 'rgba(255,120,120,0.12)' : 'rgba(194,64,47,0.08)') : (T.dark ? 'rgba(127,214,166,0.12)' : 'rgba(46,125,82,0.08)'),
+      padding: '4px 9px', borderRadius: 999 }}>
+      <UIIcon name={up ? 'arrowUp' : 'arrowDn'} size={13} stroke="currentColor" />
+      {Math.abs(delta)}% vs last month
+    </div>
+  );
+
+  if (direction === 'donut') {
+    return (
+      <Card T={T} pad={20} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <Donut data={CATEGORY_SPEND} total={TOTAL} size={206} thickness={24} dark={T.dark} ink={T.ink} muted={T.muted} onSlice={onCategory} />
+        <div style={{ marginTop: 16 }}>{deltaChip}</div>
+        <div style={{ width: '100%', display: 'flex', flexWrap: 'wrap', gap: '9px 14px', marginTop: 18, justifyContent: 'center' }}>
+          {CATEGORY_SPEND.slice(0, 4).map((c) => (
+            <div key={c.id} onClick={() => onCategory(c.id)} style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer' }}>
+              <span style={{ width: 9, height: 9, borderRadius: 3, background: c.color }} />
+              <span style={{ fontSize: 12.5, color: T.muted, fontWeight: 540 }}>{c.name}</span>
+            </div>
+          ))}
+        </div>
+      </Card>
+    );
+  }
+
+  if (direction === 'stacked') {
+    return (
+      <Card T={T} pad={20}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
+          <div>
+            <div style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: T.muted }}>Total spent</div>
+            <div style={{ fontSize: 34, fontWeight: 700, color: T.ink, letterSpacing: '-0.03em', marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
+              <span style={{ fontSize: 17, fontWeight: 600, color: T.muted, marginRight: 6 }}>AED</span>{fmtAED(TOTAL)}
+            </div>
+          </div>
+          {deltaChip}
+        </div>
+        <StackedBar data={CATEGORY_SPEND} total={TOTAL} dark={T.dark} ink={T.ink} muted={T.muted} onSeg={onCategory} />
+      </Card>
+    );
+  }
+
+  return (
+    <Card T={T} pad={20}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+        <div>
+          <div style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: T.muted }}>Total spent</div>
+          <div style={{ fontSize: 34, fontWeight: 700, color: T.ink, letterSpacing: '-0.03em', marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ fontSize: 17, fontWeight: 600, color: T.muted, marginRight: 6 }}>AED</span>{fmtAED(TOTAL)}
+          </div>
+        </div>
+        {deltaChip}
+      </div>
+      <RankedBars data={top} total={TOTAL} dark={T.dark} ink={T.ink} muted={T.muted} onBar={(d) => onCategory(d.id)} />
+    </Card>
+  );
+}
+
+function Overview({ T, direction, showLogos, nav, onPeriod, period, greeting }) {
+  const { CATEGORY_SPEND, TOTAL, TRANSACTIONS } = EXP_DATA;
+  return (
+    <Screen T={T}>
+      <AppHeader T={T} eyebrow={greeting} title="Expenses" period={period} onPeriod={onPeriod} />
+      <div style={{ marginTop: 18 }}>
+        <BreakdownHero T={T} direction={direction} onCategory={(id) => nav.push('category', { id })} onViewAll={() => nav.push('breakdown')} />
+      </div>
+
+      <SectionTitle T={T} action="View all" onAction={() => nav.push('breakdown')}>Top categories</SectionTitle>
+      <Card T={T} pad="2px 18px">
+        {CATEGORY_SPEND.slice(0, 5).map((c, i, a) => (
+          <CategoryRow key={c.id} T={T} cat={c} total={TOTAL} onClick={() => nav.push('category', { id: c.id })} divider={i < a.length - 1} />
+        ))}
+      </Card>
+
+      <SectionTitle T={T} action="View all" onAction={() => nav.push('allTxns')}>Recent</SectionTitle>
+      <Card T={T} pad="2px 18px">
+        {TRANSACTIONS.slice(0, 5).map((t, i, a) => (
+          <TxnRow key={t.id} T={T} txn={t} showLogos={showLogos} onClick={() => nav.openTxn(t)} divider={i < a.length - 1} />
+        ))}
+      </Card>
+    </Screen>
+  );
+}
+
+function Breakdown({ T, nav, onPeriod, period }) {
+  const { CATEGORY_SPEND, TOTAL } = EXP_DATA;
+  const [sort, setSort] = useState('amount');
+  const [dir, setDir] = useState('desc');
+  const setSortKey = (k) => { if (k === sort) setDir((d) => d === 'asc' ? 'desc' : 'asc'); else { setSort(k); setDir(k === 'name' ? 'asc' : 'desc'); } };
+  const sorted = [...CATEGORY_SPEND].sort((a, b) => {
+    let r = 0;
+    if (sort === 'name') r = a.name.localeCompare(b.name);
+    else if (sort === 'count') r = a.count - b.count;
+    else r = a.total - b.total;
+    return dir === 'asc' ? r : -r;
+  });
+  return (
+    <Screen T={T}>
+      <AppHeader T={T} title="All categories" onBack={() => nav.pop()} right={<PeriodPill T={T} period={period} onClick={onPeriod} inline />} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', margin: '18px 2px 14px' }}>
+        <span style={{ fontSize: 13.5, color: T.muted, fontWeight: 540 }}>{sorted.length} categories · AED {fmtAED(TOTAL)}</span>
+      </div>
+      <div style={{ marginBottom: 16 }}><SortBar T={T} value={sort} dir={dir} onChange={setSortKey} /></div>
+      <Card T={T} pad="2px 18px">
+        {sorted.map((c, i, a) => (
+          <CategoryRow key={c.id} T={T} cat={c} total={TOTAL} onClick={() => nav.push('category', { id: c.id })} divider={i < a.length - 1} mode="amount" />
+        ))}
+      </Card>
+    </Screen>
+  );
+}
+
+function Trends({ T, nav, onPeriod, period }) {
+  const { CATEGORY_SPEND, TOTAL, PREV } = EXP_DATA;
+  const ranked = [...CATEGORY_SPEND].sort((a, b) => b.total - a.total);
+  const peak = ranked[0].total;
+  return (
+    <Screen T={T}>
+      <AppHeader T={T} title="Category trends" onBack={() => nav.pop()} right={<PeriodPill T={T} period={period} onClick={onPeriod} inline />} />
+      <div style={{ marginTop: 18 }}>
+        <Card T={T} pad={20}>
+          <div style={{ fontSize: 13.5, color: T.muted, fontWeight: 540, marginBottom: 18 }}>Ranked by spend this period</div>
+          <RankedBars data={ranked} total={TOTAL} max={peak} dark={T.dark} ink={T.ink} muted={T.muted} onBar={(d) => nav.push('category', { id: d.id })} />
+        </Card>
+      </div>
+      <SectionTitle T={T}>Movers vs last month</SectionTitle>
+      <Card T={T} pad="2px 18px">
+        {ranked.map((c, i, a) => {
+          const prev = PREV[c.id] || c.total;
+          const delta = Math.round(((c.total - prev) / prev) * 100);
+          const up = delta >= 0;
+          return (
+            <div key={c.id} onClick={() => nav.push('category', { id: c.id })} style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '13px 0', cursor: 'pointer', position: 'relative' }}>
+              <CategoryMark glyph={c.glyph} color={c.color} dark={T.dark} size={40} radius={12} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15, fontWeight: 560, color: T.ink }}>{c.name}</div>
+                <div style={{ fontSize: 12.5, color: T.muted, marginTop: 2 }}>AED {fmtAED(c.total)}</div>
+              </div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 620, color: up ? (T.dark ? '#FF8E8E' : '#C2402F') : (T.dark ? '#7FD6A6' : '#2E7D52') }}>
+                <UIIcon name={up ? 'arrowUp' : 'arrowDn'} size={14} stroke="currentColor" />{Math.abs(delta)}%
+              </div>
+              {i < a.length - 1 && <div style={{ position: 'absolute', left: 53, right: 0, bottom: 0, height: 1, background: T.faint }} />}
+            </div>
+          );
+        })}
+      </Card>
+    </Screen>
+  );
+}
+
+/* ============================ DETAIL SCREENS + SHEETS ============================ */
+function monthsTrend(seedTotal, id) {
+  const labels = ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'];
+  let seed = id * 131 + 7;
+  const vals = labels.map(() => {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    const f = 0.62 + (seed % 1000) / 1000 * 0.6;
+    return Math.round(seedTotal * f);
+  });
+  vals[5] = Math.round(seedTotal);
+  return { labels, vals };
+}
+
+function SortChip({ T, active, label, dir, onClick }) {
+  return (
+    <button onClick={onClick} style={{
+      display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer',
+      border: `1px solid ${active ? 'transparent' : T.line}`, borderRadius: 999, padding: '7px 13px',
+      background: active ? T.accent : T.surface, color: active ? '#fff' : T.ink, fontSize: 13, fontWeight: 580,
+    }}>
+      {label}{active && <UIIcon name={dir === 'asc' ? 'arrowUp' : 'arrowDn'} size={14} stroke="#fff" />}
+    </button>
+  );
+}
+
+function SearchField({ T, value, onChange, placeholder }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: T.surface, border: `1px solid ${T.line}`, borderRadius: 14, padding: '11px 14px', boxShadow: T.dark ? 'none' : T.cardShadow }}>
+      <UIIcon name="search" size={18} stroke={T.muted} />
+      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
+        style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', color: T.ink, fontSize: 15, fontFamily: 'inherit' }} />
+      {value && <button onClick={() => onChange('')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: T.muted, display: 'flex' }}><UIIcon name="close" size={16} stroke={T.muted} /></button>}
+    </div>
+  );
+}
+
+function CategoryDetail({ T, id, showLogos, nav, onPeriod, period }) {
+  const { CATEGORY_SPEND, TOTAL, PREV, txnsForCategory } = EXP_DATA;
+  const cat = CATEGORY_SPEND.find((c) => c.id === id) || CATEGORY_SPEND[0];
+  const txns = useMemo(() => txnsForCategory(cat.id), [cat.id]);
+  const [q, setQ] = useState('');
+  const [sort, setSort] = useState('amount');
+  const [dir, setDir] = useState('desc');
+  const setSortKey = (k) => { if (k === sort) setDir((d) => d === 'asc' ? 'desc' : 'asc'); else { setSort(k); setDir(k === 'name' ? 'asc' : 'desc'); } };
+
+  const { labels, vals } = useMemo(() => monthsTrend(cat.total, cat.id), [cat.id]);
+  const prev = PREV[cat.id] || cat.total;
+  const delta = Math.round(((cat.total - prev) / prev) * 100);
+  const up = delta >= 0;
+  const share = Math.round((cat.total / TOTAL) * 100);
+
+  const filtered = txns
+    .filter((t) => t.merchant.toLowerCase().includes(q.toLowerCase()))
+    .sort((a, b) => {
+      let r = sort === 'name' ? a.merchant.localeCompare(b.merchant) : sort === 'count' ? Number(a.day) - Number(b.day) : a.amount - b.amount;
+      return dir === 'asc' ? r : -r;
+    });
+
+  return (
+    <Screen T={T}>
+      <AppHeader T={T} title={cat.name} onBack={() => nav.pop()} right={<PeriodPill T={T} period={period} onClick={onPeriod} inline />} />
+      <div style={{ marginTop: 18 }}>
+        <Card T={T} pad={20}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 13, marginBottom: 18 }}>
+            <CategoryMark glyph={cat.glyph} color={cat.color} dark={T.dark} size={46} radius={13} solid />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 28, fontWeight: 700, color: T.ink, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ fontSize: 15, fontWeight: 600, color: T.muted, marginRight: 5 }}>AED</span>{fmtAED(cat.total)}
+              </div>
+              <div style={{ fontSize: 13, color: T.muted, marginTop: 2 }}>{cat.count} transactions · {share}% of spend</div>
+            </div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 640, color: up ? (T.dark ? '#FF8E8E' : '#C2402F') : (T.dark ? '#7FD6A6' : '#2E7D52') }}>
+              <UIIcon name={up ? 'arrowUp' : 'arrowDn'} size={14} stroke="currentColor" />{Math.abs(delta)}%
+            </div>
+          </div>
+          <ColumnTrend values={vals} labels={labels} color={cat.color} dark={T.dark} ink={T.ink} muted={T.muted} height={116} />
+        </Card>
+      </div>
+
+      <SectionTitle T={T}>Top brands</SectionTitle>
+      <Card T={T} pad={20}>
+        <RankedBars data={cat.brands.map((b) => ({ ...b, color: cat.color }))} total={cat.total} max={cat.brands[0].total} dark={T.dark} ink={T.ink} muted={T.muted} />
+      </Card>
+
+      <SectionTitle T={T}>Transactions</SectionTitle>
+      <SearchField T={T} value={q} onChange={setQ} placeholder={`Search ${cat.name.toLowerCase()}`} />
+      <div style={{ margin: '12px 0 16px' }}><SortBar T={T} value={sort} dir={dir} onChange={setSortKey} /></div>
+      <Card T={T} pad="2px 18px">
+        {filtered.length === 0 && <div style={{ padding: '26px 0', textAlign: 'center', color: T.muted, fontSize: 14 }}>No matches</div>}
+        {filtered.map((t, i, a) => (
+          <TxnRow key={t.id} T={T} txn={t} showLogos={showLogos} onClick={() => nav.openTxn(t)} divider={i < a.length - 1} />
+        ))}
+      </Card>
+    </Screen>
+  );
+}
+
+function AllTransactions({ T, showLogos, nav, onPeriod, period }) {
+  const { TRANSACTIONS } = EXP_DATA;
+  const [q, setQ] = useState('');
+  const [sort, setSort] = useState('count');
+  const [dir, setDir] = useState('desc');
+  const setSortKey = (k) => { if (k === sort) setDir((d) => d === 'asc' ? 'desc' : 'asc'); else { setSort(k); setDir(k === 'name' ? 'asc' : 'desc'); } };
+  const filtered = TRANSACTIONS
+    .filter((t) => t.merchant.toLowerCase().includes(q.toLowerCase()) || t.category.toLowerCase().includes(q.toLowerCase()))
+    .sort((a, b) => {
+      let r = sort === 'name' ? a.merchant.localeCompare(b.merchant) : sort === 'amount' ? a.amount - b.amount : Number(a.day) - Number(b.day);
+      return dir === 'asc' ? r : -r;
+    });
+  return (
+    <Screen T={T}>
+      <AppHeader T={T} title="Transactions" onBack={() => nav.pop()} right={<PeriodPill T={T} period={period} onClick={onPeriod} inline />} />
+      <div style={{ marginTop: 16 }}><SearchField T={T} value={q} onChange={setQ} placeholder="Search merchant or category" /></div>
+      <div style={{ margin: '12px 0 16px', display: 'flex', gap: 9 }}>
+        <SortChip T={T} active={sort === 'count'} label="Date" dir={dir} onClick={() => setSortKey('count')} />
+        <SortChip T={T} active={sort === 'amount'} label="Amount" dir={dir} onClick={() => setSortKey('amount')} />
+        <SortChip T={T} active={sort === 'name'} label="Name" dir={dir} onClick={() => setSortKey('name')} />
+      </div>
+      <Card T={T} pad="2px 18px">
+        {filtered.map((t, i, a) => (
+          <TxnRow key={t.id} T={T} txn={t} showLogos={showLogos} onClick={() => nav.openTxn(t)} divider={i < a.length - 1} />
+        ))}
+      </Card>
+    </Screen>
+  );
+}
+
+function SheetBtn({ T, label, primary }) {
+  return (
+    <button style={{ flex: 1, padding: '13px 0', borderRadius: 14, cursor: 'pointer', fontSize: 14.5, fontWeight: 600,
+      border: primary ? 'none' : `1px solid ${T.line}`, background: primary ? T.accent : T.surface, color: primary ? '#fff' : T.ink, boxShadow: T.dark ? 'none' : T.cardShadow }}>{label}</button>
+  );
+}
+
+function TxnDetailSheet({ T, txn, open, onClose, showLogos }) {
+  const rows = txn ? [
+    ['Merchant', txn.merchant], ['Category', txn.category], ['Date', txn.date],
+    ['Status', 'Settled'], ['Payment', 'Visa •• 4821'], ['Reference', 'TXN-' + txn.id],
+  ] : [];
+  return (
+    <Sheet T={T} open={open} onClose={onClose} title="Transaction">
+      {txn && (
+        <div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '6px 0 22px' }}>
+            <MerchantMark name={txn.merchant} glyph={txn.glyph} catColor={txn.categoryColor} showLogos={showLogos} dark={T.dark} size={64} radius={18} />
+            <div style={{ fontSize: 32, fontWeight: 720, color: T.ink, marginTop: 16, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
+              <span style={{ fontSize: 17, fontWeight: 600, color: T.muted, marginRight: 6 }}>AED</span>{fmtAED(txn.amount, txn.amount % 1 !== 0)}
+            </div>
+            <div style={{ fontSize: 14, color: T.muted, marginTop: 5 }}>{txn.merchant} · {txn.date}</div>
+          </div>
+          <Card T={T} pad="2px 18px">
+            {rows.map((r, i) => (
+              <div key={r[0]} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '13px 0', position: 'relative' }}>
+                <span style={{ fontSize: 14.5, color: T.muted }}>{r[0]}</span>
+                <span style={{ fontSize: 14.5, color: T.ink, fontWeight: 560 }}>{r[1]}</span>
+                {i < rows.length - 1 && <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 1, background: T.faint }} />}
+              </div>
+            ))}
+          </Card>
+          <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+            <SheetBtn T={T} label="Split" />
+            <SheetBtn T={T} label="Categorise" />
+            <SheetBtn T={T} label="Receipt" primary />
+          </div>
+        </div>
+      )}
+    </Sheet>
+  );
+}
+
+function PeriodSheet({ T, open, onClose, period, onPick }) {
+  const { PERIODS, DATE_LABEL } = EXP_DATA;
+  return (
+    <Sheet T={T} open={open} onClose={onClose} title="Period">
+      <Card T={T} pad="2px 18px">
+        {PERIODS.map((p, i) => {
+          const active = p === period;
+          return (
+            <div key={p} onClick={() => { onPick(p); onClose(); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '15px 0', cursor: 'pointer', position: 'relative' }}>
+              <span style={{ fontSize: 15.5, color: T.ink, fontWeight: active ? 620 : 500 }}>{p}</span>
+              {active && <span style={{ color: T.accent, display: 'flex' }}><svg width="20" height="20" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7" fill="none" stroke={T.accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg></span>}
+              {i < PERIODS.length - 1 && <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 1, background: T.faint }} />}
+            </div>
+          );
+        })}
+      </Card>
+      <div style={{ textAlign: 'center', fontSize: 13, color: T.muted, marginTop: 16 }}>{DATE_LABEL}</div>
+      <button onClick={onClose} style={{ width: '100%', marginTop: 16, padding: '14px 0', borderRadius: 14, border: 'none', cursor: 'pointer', background: T.accent, color: '#fff', fontSize: 15, fontWeight: 620 }}>Done</button>
+    </Sheet>
+  );
+}
+
+/* ============================ SETTINGS (self-contained) ============================
+   Production replacement for the prototype's design-time "Tweaks" panel — plain
+   React state, no host protocol. Lets stakeholders compare the three breakdown
+   directions, accent, dark mode and logo-vs-fallback on the live build. Delete
+   this component (and the gear button) to ship only the default configuration. */
+const ACCENTS = ['#0E7C66', '#2D5BD0', '#6D45C9', '#B07A1E', '#3A3D44'];
+const SETTINGS_PANEL = {
+  position: 'fixed', right: 16, bottom: 16, zIndex: 1000, width: 248,
+  background: 'rgba(250,249,247,.85)', color: '#29261b',
+  WebkitBackdropFilter: 'blur(24px) saturate(160%)', backdropFilter: 'blur(24px) saturate(160%)',
+  border: '.5px solid rgba(255,255,255,.6)', borderRadius: 14,
+  boxShadow: '0 1px 0 rgba(255,255,255,.5) inset, 0 12px 40px rgba(0,0,0,.18)',
+  font: '11.5px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif', overflow: 'hidden',
+};
+const SECT = { fontSize: 10, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: 'rgba(41,38,27,.45)', padding: '12px 0 6px' };
+
+function Segmented({ value, options, onChange }) {
+  return (
+    <div style={{ display: 'flex', padding: 2, borderRadius: 8, background: 'rgba(0,0,0,.06)', gap: 2 }}>
+      {options.map((o) => {
+        const on = o === value;
+        return (
+          <button key={o} type="button" onClick={() => onChange(o)} style={{
+            flex: 1, border: 0, borderRadius: 6, padding: '5px 6px', cursor: 'pointer',
+            background: on ? 'rgba(255,255,255,.95)' : 'transparent', color: 'inherit', font: 'inherit',
+            fontWeight: 500, textTransform: 'capitalize', boxShadow: on ? '0 1px 2px rgba(0,0,0,.12)' : 'none',
+          }}>{o}</button>
+        );
+      })}
+    </div>
+  );
+}
+
+function Toggle({ value, onChange }) {
+  return (
+    <button type="button" role="switch" aria-checked={value} onClick={() => onChange(!value)} style={{
+      position: 'relative', width: 32, height: 18, border: 0, borderRadius: 999, cursor: 'pointer',
+      background: value ? '#34c759' : 'rgba(0,0,0,.15)', transition: 'background .15s', padding: 0,
+    }}>
+      <i style={{ position: 'absolute', top: 2, left: 2, width: 14, height: 14, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,.25)', transform: value ? 'translateX(14px)' : 'translateX(0)', transition: 'transform .15s' }} />
+    </button>
+  );
+}
+
+function SRow({ label, children }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '4px 0' }}>
+      <span style={{ fontWeight: 500, color: 'rgba(41,38,27,.72)' }}>{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function SettingsPanel({ settings, setSetting }) {
+  const [open, setOpen] = useState(false);
+  if (!open) {
+    return (
+      <button type="button" aria-label="Open settings" onClick={() => setOpen(true)} style={{
+        position: 'fixed', right: 16, bottom: 16, zIndex: 1000, width: 44, height: 44, borderRadius: 12,
+        border: '.5px solid rgba(255,255,255,.6)', cursor: 'pointer', background: 'rgba(250,249,247,.85)',
+        WebkitBackdropFilter: 'blur(24px) saturate(160%)', backdropFilter: 'blur(24px) saturate(160%)',
+        boxShadow: '0 1px 0 rgba(255,255,255,.5) inset, 0 12px 40px rgba(0,0,0,.18)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#29261b',
+      }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+      </button>
+    );
+  }
+  return (
+    <div style={SETTINGS_PANEL}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 8px 10px 14px' }}>
+        <b style={{ fontSize: 12, fontWeight: 600 }}>Settings</b>
+        <button type="button" aria-label="Close settings" onClick={() => setOpen(false)} style={{ border: 0, background: 'transparent', color: 'rgba(41,38,27,.55)', width: 22, height: 22, borderRadius: 6, cursor: 'pointer', fontSize: 13, lineHeight: 1 }}>✕</button>
+      </div>
+      <div style={{ padding: '0 14px 14px', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ ...SECT, paddingTop: 0 }}>Breakdown chart</div>
+        <Segmented value={settings.direction} options={['donut', 'bars', 'stacked']} onChange={(v) => setSetting('direction', v)} />
+        <div style={SECT}>Brand theming</div>
+        <SRow label="Accent">
+          <div style={{ display: 'flex', gap: 6 }}>
+            {ACCENTS.map((c) => {
+              const on = c.toLowerCase() === settings.accent.toLowerCase();
+              return <button key={c} type="button" aria-label={c} onClick={() => setSetting('accent', c)} style={{ width: 22, height: 22, borderRadius: 6, cursor: 'pointer', background: c, padding: 0, border: 0, boxShadow: on ? '0 0 0 1.5px rgba(0,0,0,.85)' : '0 0 0 .5px rgba(0,0,0,.12)' }} />;
+            })}
+          </div>
+        </SRow>
+        <SRow label="Dark mode"><Toggle value={settings.dark} onChange={(v) => setSetting('dark', v)} /></SRow>
+        <div style={SECT}>Merchant identity</div>
+        <SRow label="Show logos"><Toggle value={settings.showLogos} onChange={(v) => setSetting('showLogos', v)} /></SRow>
+        <div style={{ fontSize: 11, color: 'rgba(41,38,27,.55)', lineHeight: 1.5, marginTop: 6 }}>
+          Off shows the neutral category fallback the SDK ships when a logo is missing — never an error state.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================ APP SHELL ============================ */
+const DEFAULTS = { direction: 'donut', accent: '#0E7C66', dark: false, showLogos: true };
+
+function ExpensesApp() {
+  const [settings, setSettings] = useState(DEFAULTS);
+  const setSetting = useCallback((key, val) => setSettings((s) => ({ ...s, [key]: val })), []);
+  const T = makeTheme(settings.dark, settings.accent);
+
+  const [stack, setStack] = useState([{ screen: 'overview', params: {} }]);
+  const [anim, setAnim] = useState('fwd');
+  const [period, setPeriod] = useState(EXP_DATA.CURRENT_PERIOD);
+  const [txn, setTxn] = useState(null);
+  const [txnOpen, setTxnOpen] = useState(false);
+  const [periodOpen, setPeriodOpen] = useState(false);
+  const screensRef = useRef(null);
+
+  const nav = useMemo(() => ({
+    push(screen, params = {}) { setAnim('fwd'); setStack((s) => [...s, { screen, params }]); if (screensRef.current) screensRef.current.scrollTop = 0; },
+    pop() { setAnim('back'); setStack((s) => (s.length > 1 ? s.slice(0, -1) : s)); },
+    openTxn(tx) { setTxn(tx); setTxnOpen(true); },
+  }), []);
+
+  const top = stack[stack.length - 1];
+  const onPeriod = () => setPeriodOpen(true);
+
+  useEffect(() => { if (screensRef.current) screensRef.current.scrollTop = 0; }, [stack.length]);
+
+  const renderScreen = () => {
+    const common = { T, nav, period, onPeriod, showLogos: settings.showLogos };
+    switch (top.screen) {
+      case 'overview': return <Overview {...common} direction={settings.direction} greeting="Good evening, Layla" />;
+      case 'breakdown': return <Breakdown {...common} />;
+      case 'trends': return <Trends {...common} />;
+      case 'category': return <CategoryDetail {...common} id={top.params.id} />;
+      case 'allTxns': return <AllTransactions {...common} />;
+      default: return <Overview {...common} direction={settings.direction} greeting="Good evening, Layla" />;
+    }
+  };
+
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: T.dark ? '#050507' : '#E7E5E0', padding: 24, boxSizing: 'border-box', transition: 'background .3s' }}>
+      <IOSDevice dark={T.dark} width={390} height={844}>
+        <div style={{ position: 'relative', height: '100%', overflow: 'hidden', background: T.bg }}>
+          <div ref={screensRef} className="exp-screens" style={{ height: '100%', overflowY: 'auto', overflowX: 'hidden', paddingTop: 56 }}>
+            <div key={stack.length + '-' + top.screen} className={anim === 'fwd' ? 'slide-fwd' : 'slide-back'}>
+              {renderScreen()}
+            </div>
+          </div>
+          <TxnDetailSheet T={T} txn={txn} open={txnOpen} onClose={() => setTxnOpen(false)} showLogos={settings.showLogos} />
+          <PeriodSheet T={T} open={periodOpen} onClose={() => setPeriodOpen(false)} period={period} onPick={setPeriod} />
+        </div>
+      </IOSDevice>
+      <SettingsPanel settings={settings} setSetting={setSetting} />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<ExpensesApp />);
+</script>
+</body>
+</html>
