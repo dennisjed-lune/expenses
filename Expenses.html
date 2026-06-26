@@ -200,13 +200,44 @@
     return { labels: MONTH_LABELS, vals };
   }
 
+  // ── Global timeframe filter ──────────────────────────────────────────
+  // The selected timeframe is a GLOBAL filter that scales the aggregate
+  // spend shown on every page (Spends landing, Category Trends, lists).
+  // Base figures represent ~30 days; longer windows scale up (slightly
+  // sub-linear, since real spend isn't perfectly uniform). The category
+  // drill-down is intentionally NOT scaled — it shows historical monthly
+  // spend regardless of the selected timeframe.
+  const PERIODS = ['Last 30 days', 'Last 3 months', 'Last 6 months', 'Last 12 months'];
+  const PERIOD_MULT = { 'Last 30 days': 1, 'Last 3 months': 2.9, 'Last 6 months': 5.7, 'Last 12 months': 11.2 };
+  const PERIOD_LABEL = {
+    'Last 30 days': '30 May – 28 Jun 2026',
+    'Last 3 months': '29 Mar – 28 Jun 2026',
+    'Last 6 months': '29 Dec 2025 – 28 Jun 2026',
+    'Last 12 months': '29 Jun 2025 – 28 Jun 2026',
+  };
+
+  function forPeriod(period) {
+    const m = PERIOD_MULT[period] || 1;
+    const r2 = (n) => Math.round(n * 100) / 100;
+    const cats = CATEGORY_SPEND.map((c) => ({
+      ...c,
+      total: r2(c.total * m),
+      count: Math.max(1, Math.round(c.count * m)),
+      brands: c.brands.map((b) => ({ ...b, total: r2(b.total * m), count: Math.max(1, Math.round(b.count * m)) })),
+    }));
+    const total = r2(cats.reduce((s, c) => s + c.total, 0));
+    const prev = {};
+    Object.keys(PREV).forEach((k) => { prev[k] = PREV[k] * m; });
+    return { CATEGORY_SPEND: cats, TOTAL: total, PREV: prev, TRANSACTIONS, DATE_LABEL: PERIOD_LABEL[period] || '', mult: m };
+  }
+
   window.EXP_DATA = {
     CATEGORIES, BRANDS, CATEGORY_SPEND, TOTAL, PREV, TRANSACTIONS, MERCHANT_CAT,
     MONTH_LABELS, MONTH_YEAR,
     txnsForCategory, txnsForBrand, txnsForCategoryMonth, categoryMonths, brandMonths,
-    PERIODS: ['This month', 'Last month', 'Last 3 months', 'This year'],
-    CURRENT_PERIOD: 'This month',
-    DATE_LABEL: '1 – 28 May 2026',
+    forPeriod, PERIODS, PERIOD_LABEL,
+    CURRENT_PERIOD: 'Last 30 days',
+    DATE_LABEL: PERIOD_LABEL['Last 30 days'],
   };
 })();
 
@@ -1918,8 +1949,8 @@ Object.assign(window, { FeedbackSheet, TxnListSheet, CategoryGrid, LoopDiagram }
 const D = () => window.EXP_DATA;
 
 // Hero donut — high-level landing view
-function BreakdownHero({ T, onCategory }) {
-  const { CATEGORY_SPEND, TOTAL, PREV } = D();
+function BreakdownHero({ T, onCategory, data, total, prev }) {
+  const CATEGORY_SPEND = data, TOTAL = total, PREV = prev;
   const prevTotal = Object.values(PREV).reduce((a, b) => a + b, 0);
   const delta = Math.round(((TOTAL - prevTotal) / prevTotal) * 100);
   const up = delta >= 0;
@@ -1930,7 +1961,7 @@ function BreakdownHero({ T, onCategory }) {
       background: up ? T.posBg : T.negBg,
       padding: '4px 9px', borderRadius: 999 }}>
       <UIIcon name={up ? 'arrowUp' : 'arrowDn'} size={13} stroke="currentColor" />
-      {Math.abs(delta)}% vs last month
+      {Math.abs(delta)}% vs prev. period
     </div>
   );
 
@@ -1939,7 +1970,7 @@ function BreakdownHero({ T, onCategory }) {
       <Donut data={CATEGORY_SPEND} total={TOTAL} size={208} thickness={24} dark={T.dark} ink={T.ink} muted={T.muted} onSlice={onCategory} />
       <div style={{ marginTop: 16 }}>{deltaChip}</div>
       <div style={{ width: '100%', display: 'flex', flexWrap: 'wrap', gap: '9px 16px', marginTop: 18, justifyContent: 'center' }}>
-        {CATEGORY_SPEND.slice(0, 5).map((c) => (
+        {CATEGORY_SPEND.slice(0, 2).map((c) => (
           <div key={c.id} onClick={() => onCategory(c.id)} style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer' }}>
             <span style={{ width: 9, height: 9, borderRadius: 3, background: c.color }} />
             <span style={{ fontSize: 12.5, color: T.muted, fontWeight: 540 }}>{c.name}</span>
@@ -1951,20 +1982,25 @@ function BreakdownHero({ T, onCategory }) {
 }
 
 function Overview({ T, showLogos, nav, onPeriod, period, greeting }) {
-  const { CATEGORY_SPEND, TOTAL, TRANSACTIONS } = D();
+  const { CATEGORY_SPEND, TOTAL, TRANSACTIONS, PREV } = D().forPeriod(period);
+  const top2 = CATEGORY_SPEND.slice(0, 2);
   return (
     <Screen T={T}>
-      <AppHeader T={T} eyebrow={greeting} title="Expenses" period={period} onPeriod={onPeriod} />
+      <AppHeader T={T} eyebrow={greeting} title="Spends" period={period} onPeriod={onPeriod} />
       <div style={{ marginTop: 18 }}>
-        <BreakdownHero T={T} onCategory={(id) => nav.push('category', { id })} />
+        <BreakdownHero T={T} data={CATEGORY_SPEND} total={TOTAL} prev={PREV} onCategory={(id) => nav.push('category', { id })} />
       </div>
 
-      <SectionTitle T={T} action="Category trends" onAction={() => nav.push('trends')}>Top categories</SectionTitle>
+      <SectionTitle T={T} action="View all" onAction={() => nav.push('trends')}>Top categories</SectionTitle>
       <Card T={T} pad="2px 18px">
-        {CATEGORY_SPEND.slice(0, 5).map((c, i, a) => (
+        {top2.map((c, i, a) => (
           <CategoryRow key={c.id} T={T} cat={c} total={TOTAL} onClick={() => nav.push('category', { id: c.id })} divider={i < a.length - 1} />
         ))}
       </Card>
+      <button onClick={() => nav.push('trends')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', marginTop: 14, padding: '15px 0', borderRadius: 14, border: 'none', cursor: 'pointer', background: T.accent, color: '#fff', fontSize: 14.5, fontWeight: 640, fontFamily: 'inherit', boxShadow: T.dark ? 'none' : T.cardShadow }}>
+        View category trends
+        <UIIcon name="chevR" size={17} stroke="#fff" />
+      </button>
 
       <SectionTitle T={T} action="View all" onAction={() => nav.push('allTxns')}>Recent</SectionTitle>
       <Card T={T} pad="2px 18px">
@@ -1977,7 +2013,7 @@ function Overview({ T, showLogos, nav, onPeriod, period, greeting }) {
 }
 
 function Breakdown({ T, showLogos, nav, onPeriod, period }) {
-  const { CATEGORY_SPEND, TOTAL } = D();
+  const { CATEGORY_SPEND, TOTAL } = D().forPeriod(period);
   const [sort, setSort] = React.useState('amount');
   const [dir, setDir] = React.useState('desc');
   const setSortKey = (k) => { if (k === sort) setDir((d) => d === 'asc' ? 'desc' : 'asc'); else { setSort(k); setDir(k === 'name' ? 'asc' : 'desc'); } };
@@ -2009,20 +2045,19 @@ function Breakdown({ T, showLogos, nav, onPeriod, period }) {
 }
 
 function Trends({ T, nav, onPeriod, period }) {
-  const { CATEGORY_SPEND, TOTAL, PREV } = D();
+  const { CATEGORY_SPEND, TOTAL, PREV } = D().forPeriod(period);
   const ranked = [...CATEGORY_SPEND].sort((a, b) => b.total - a.total);
   const peak = ranked[0].total;
   return (
     <Screen T={T}>
-      <AppHeader T={T} title="Trends" eyebrow="Categories" onBack={() => nav.pop()}
-        right={<PeriodPill T={T} period={period} onClick={onPeriod} inline />} />
+      <AppHeader T={T} title="Category trends" onBack={() => nav.pop()} period={period} onPeriod={onPeriod} />
       <div style={{ marginTop: 18 }}>
         <Card T={T} pad={20}>
-          <div style={{ fontSize: 13.5, color: T.muted, fontWeight: 540, marginBottom: 18 }}>Categories ranked by spend this period</div>
+          <div style={{ fontSize: 13.5, color: T.muted, fontWeight: 540, marginBottom: 18 }}>Categories ranked by spend · {period} · tap to drill in</div>
           <RankedBars data={ranked} total={TOTAL} max={peak} dark={T.dark} ink={T.ink} muted={T.muted} onBar={(d) => nav.push('category', { id: d.id })} />
         </Card>
       </div>
-      <SectionTitle T={T}>Movers vs last month</SectionTitle>
+      <SectionTitle T={T}>Movers vs previous period</SectionTitle>
       <Card T={T} pad="2px 18px">
         {ranked.map((c, i, a) => {
           const prev = PREV[c.id] || c.total;
@@ -2071,7 +2106,9 @@ function CategoryDetail({ T, id, showLogos, nav, onPeriod, period }) {
   const prev = PREV[cat.id] || cat.total;
   const delta = Math.round(((cat.total - prev) / prev) * 100);
   const up = delta >= 0;
-  const share = Math.round((cat.total / TOTAL) * 100);
+  // Category drill-down is HISTORICAL — independent of the global timeframe.
+  const histTotal = vals.reduce((a, b) => a + b, 0);
+  const avgMonth = Math.round(histTotal / vals.length);
 
   const filtered = txns
     .filter((t) => t.merchant.toLowerCase().includes(q.toLowerCase()))
@@ -2085,8 +2122,7 @@ function CategoryDetail({ T, id, showLogos, nav, onPeriod, period }) {
 
   return (
     <Screen T={T}>
-      <AppHeader T={T} title={cat.name} onBack={() => nav.pop()}
-        right={<PeriodPill T={T} period={period} onClick={onPeriod} inline />} />
+      <AppHeader T={T} title={cat.name} eyebrow="Historical spend" onBack={() => nav.pop()} />
 
       <div style={{ marginTop: 18 }}>
         <Card T={T} pad={20}>
@@ -2094,14 +2130,18 @@ function CategoryDetail({ T, id, showLogos, nav, onPeriod, period }) {
             <CategoryMark glyph={cat.glyph} color={cat.color} dark={T.dark} size={46} radius={13} solid />
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 28, fontWeight: 700, color: T.ink, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
-                <span style={{ fontSize: 15, fontWeight: 600, color: T.muted, marginRight: 5 }}>AED</span>{fmtAED(cat.total)}
+                <span style={{ fontSize: 15, fontWeight: 600, color: T.muted, marginRight: 5 }}>AED</span>{fmtAED(histTotal)}
               </div>
-              <div style={{ fontSize: 13, color: T.muted, marginTop: 2 }}>{cat.count} transactions · {share}% of spend</div>
+              <div style={{ fontSize: 13, color: T.muted, marginTop: 2 }}>Last 6 months · ~AED {fmtAED(avgMonth)}/mo</div>
             </div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 640,
               color: up ? T.posInk : T.negInk }}>
               <UIIcon name={up ? 'arrowUp' : 'arrowDn'} size={14} stroke="currentColor" />{Math.abs(delta)}%
             </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 12, fontWeight: 640, letterSpacing: '0.04em', textTransform: 'uppercase', color: T.muted }}>Spend by month</span>
+            <span style={{ fontSize: 11, fontWeight: 580, color: T.muted, background: T.faint, padding: '4px 9px', borderRadius: 999 }}>All history · not filtered by timeframe</span>
           </div>
           <ColumnTrend values={vals} labels={labels} color={cat.color} dark={T.dark} ink={T.ink} muted={T.muted} height={124} onMonth={openMonth} />
           <div style={{ fontSize: 11.5, color: T.muted, textAlign: 'center', marginTop: 12 }}>Tap a month to see its transactions</div>
@@ -2264,9 +2304,9 @@ function TxnDetailSheet({ T, txn, open, onClose, showLogos, onImprove }) {
 }
 
 function PeriodSheet({ T, open, onClose, period, onPick }) {
-  const { PERIODS, DATE_LABEL } = window.EXP_DATA;
+  const { PERIODS, PERIOD_LABEL } = window.EXP_DATA;
   return (
-    <Sheet T={T} open={open} onClose={onClose} title="Period">
+    <Sheet T={T} open={open} onClose={onClose} title="Timeframe">
       <Card T={T} pad="2px 18px">
         {PERIODS.map((p, i) => {
           const active = p === period;
@@ -2279,7 +2319,8 @@ function PeriodSheet({ T, open, onClose, period, onPick }) {
           );
         })}
       </Card>
-      <div style={{ textAlign: 'center', fontSize: 13, color: T.muted, marginTop: 16 }}>{DATE_LABEL}</div>
+      <div style={{ textAlign: 'center', fontSize: 13, color: T.muted, marginTop: 16 }}>{PERIOD_LABEL[period]}</div>
+      <div style={{ textAlign: 'center', fontSize: 12, color: T.muted, marginTop: 6 }}>Applies across Spends and Category trends</div>
       <button onClick={onClose} style={{ width: '100%', marginTop: 16, padding: '14px 0', borderRadius: 14, border: 'none', cursor: 'pointer', background: T.accent, color: '#fff', fontSize: 15, fontWeight: 620, fontFamily: 'inherit' }}>Done</button>
     </Sheet>
   );
