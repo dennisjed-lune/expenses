@@ -1232,7 +1232,7 @@ function MerchantLogo({ name, size, radius, dark }) {
     const light = NOON_YELLOW_TEXT.has(name);
     return (
       <div style={{
-        width: size, height: size, borderRadius: radius, background: bg,
+        width: size, height: size, borderRadius: size / 2, background: bg,
         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
         color: light ? '#1A1A1A' : '#fff', fontWeight: 600, fontSize: size * 0.33, letterSpacing: '-0.02em',
         boxShadow: dark ? 'inset 0 0 0 1px rgba(255,255,255,0.08)' : 'inset 0 0 0 1px rgba(0,0,0,0.05)',
@@ -1241,7 +1241,7 @@ function MerchantLogo({ name, size, radius, dark }) {
   }
   return (
     <div style={{
-      width: size, height: size, borderRadius: radius, background: '#FFFFFF', flexShrink: 0,
+      width: size, height: size, borderRadius: size / 2, background: '#FFFFFF', flexShrink: 0,
       display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
       boxShadow: dark ? 'inset 0 0 0 1px rgba(255,255,255,0.10)' : 'inset 0 0 0 1px rgba(0,0,0,0.06)',
     }}>
@@ -1259,7 +1259,7 @@ function MerchantMark({ name, glyph, catColor, size = 44, radius = 13, showLogos
   // fallback: neutral surface + category glyph in category color
   return (
     <div style={{
-      width: size, height: size, borderRadius: radius,
+      width: size, height: size, borderRadius: size / 2,
       background: hexA(catColor, dark ? 0.20 : 0.12),
       display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
       color: catColor,
@@ -1269,12 +1269,12 @@ function MerchantMark({ name, glyph, catColor, size = 44, radius = 13, showLogos
   );
 }
 
-// Category chip (always the glyph, tinted)
+// Category chip — circular tinted icon (matches the SDK's ExpenseBreakdownTile)
 function CategoryMark({ glyph, color, size = 44, radius = 13, dark = false, solid = false }) {
   return (
     <div style={{
-      width: size, height: size, borderRadius: radius,
-      background: solid ? color : hexA(color, dark ? 0.22 : 0.13),
+      width: size, height: size, borderRadius: size / 2,
+      background: solid ? color : hexA(color, dark ? 0.28 : 0.2),
       display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
     }}>
       <CatGlyph glyph={glyph} size={size * 0.5} color={solid ? '#fff' : color} />
@@ -1664,7 +1664,7 @@ function PeriodPill({ T, period, onClick, inline }) {
       fontSize: 13.5, fontWeight: 580, boxShadow: T.dark ? 'none' : T.cardShadow,
     }}>
       <span style={{ color: T.accent, display: 'flex' }}><UIIcon name="calendar" size={16} stroke={T.accent} /></span>
-      {period}
+      {(window.EXP_DATA.PERIOD_LABEL && window.EXP_DATA.PERIOD_LABEL[period]) || period}
       <UIIcon name="chevD" size={15} stroke={T.muted} />
     </button>
   );
@@ -1688,27 +1688,27 @@ function TxnRow({ T, txn, showLogos, onClick, showCategory = true, divider }) {
   );
 }
 
-// Category row with inline share meter
-function CategoryRow({ T, cat, total, rank, onClick, divider, mode = 'amount' }) {
-  const share = Math.round((cat.total / total) * 100);
+// Category tile — circular icon, title + amount, subtitle + percentage, progress bar
+function CategoryRow({ T, cat, total, onClick, divider }) {
+  const pct = total ? Math.min(Math.abs(cat.total) / Math.abs(total), 1) : 0;
+  const pctText = (pct * 100).toFixed(1) + '%';
   return (
-    <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '12px 0', cursor: 'pointer', position: 'relative' }}>
-      <CategoryMark glyph={cat.glyph} color={cat.color} dark={T.dark} size={42} radius={12} />
+    <div onClick={onClick} style={{ display: 'flex', alignItems: 'flex-start', gap: 13, padding: '14px 0', cursor: 'pointer', position: 'relative' }}>
+      <CategoryMark glyph={cat.glyph} color={cat.color} dark={T.dark} size={44} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
-          <span style={{ fontSize: 15, fontWeight: 560, color: T.ink }}>{cat.name}</span>
-          <span style={{ fontSize: 15, fontWeight: 620, color: T.ink, fontVariantNumeric: 'tabular-nums' }}>AED {fmtAED(cat.total)}</span>
+          <span style={{ fontSize: 15, fontWeight: 600, color: T.ink }}>{cat.name}</span>
+          <span style={{ fontSize: 15, fontWeight: 600, color: T.ink, fontVariantNumeric: 'tabular-nums' }}>AED {fmtAED(cat.total)}</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 7 }}>
-          <div style={{ flex: 1, height: 5, borderRadius: 999, background: T.dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${share}%`, background: cat.color, borderRadius: 999 }} />
-          </div>
-          <span style={{ fontSize: 12, color: T.muted, fontWeight: 540, width: 64, textAlign: 'right' }}>
-            {mode === 'amount' ? `${cat.count} txns` : `${share}%`}
-          </span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, marginTop: 5 }}>
+          <span style={{ fontSize: 12.5, color: T.muted }}>{cat.count} transactions</span>
+          <span style={{ fontSize: 12.5, color: T.muted, fontVariantNumeric: 'tabular-nums' }}>{pctText}</span>
+        </div>
+        <div style={{ height: 6, borderRadius: 4, background: hexA(cat.color, T.dark ? 0.22 : 0.15), overflow: 'hidden', marginTop: 8 }}>
+          <div style={{ height: '100%', width: `${pct * 100}%`, background: cat.color, borderRadius: 4 }} />
         </div>
       </div>
-      {divider && <div style={{ position: 'absolute', left: 55, right: 0, bottom: 0, height: 1, background: T.faint }} />}
+      {divider && <div style={{ position: 'absolute', left: 57, right: 0, bottom: 0, height: 1, background: T.faint }} />}
     </div>
   );
 }
@@ -1754,7 +1754,7 @@ function SortBar({ T, value, dir, onChange }) {
       </button>
     );
   };
-  return <div style={{ display: 'flex', gap: 9 }}>{opt('amount', 'Amount')}{opt('name', 'Name')}{opt('count', 'Frequency')}</div>;
+  return <div style={{ display: 'flex', gap: 9 }}>{opt('name', 'Name')}{opt('spend', 'Avg spend')}</div>;
 }
 
 Object.assign(window, { makeTheme, Screen, Card, SectionTitle, AppHeader, PeriodPill, TxnRow, CategoryRow, Sheet, SortBar });
@@ -2038,7 +2038,7 @@ function Overview({ T, showLogos, nav, onPeriod, period, greeting }) {
       <AppHeader T={T} eyebrow={greeting} title="Spends" period={period} onPeriod={onPeriod} />
       <div style={{ marginTop: 18 }}>
         <BreakdownHero T={T} data={CATEGORY_SPEND} total={TOTAL}
-          onCategory={(id) => nav.push('category', { id })} onMore={() => nav.push('trends')} />
+          onCategory={(id) => nav.openCategory(id)} onMore={() => nav.push('breakdown')} />
       </div>
 
       <button onClick={() => nav.push('trends')} style={{ display: 'flex', alignItems: 'center', gap: 14, width: '100%', marginTop: 20, padding: 18, borderRadius: 20, border: 'none', cursor: 'pointer', background: T.accent, color: '#fff', textAlign: 'left', fontFamily: 'inherit', boxShadow: T.dark ? 'none' : T.cardShadow }}>
@@ -2066,32 +2066,37 @@ function Overview({ T, showLogos, nav, onPeriod, period, greeting }) {
 
 function Breakdown({ T, showLogos, nav, onPeriod, period }) {
   const { CATEGORY_SPEND, TOTAL } = D().forPeriod(period);
-  const [sort, setSort] = React.useState('amount');
+  const [sort, setSort] = React.useState('spend');
   const [dir, setDir] = React.useState('desc');
   const setSortKey = (k) => { if (k === sort) setDir((d) => d === 'asc' ? 'desc' : 'asc'); else { setSort(k); setDir(k === 'name' ? 'asc' : 'desc'); } };
+  const avg = (c) => c.total / Math.max(c.count, 1);
   const sorted = [...CATEGORY_SPEND].sort((a, b) => {
-    let r = 0;
-    if (sort === 'name') r = a.name.localeCompare(b.name);
-    else if (sort === 'count') r = a.count - b.count;
-    else r = a.total - b.total;
+    const r = sort === 'name' ? a.name.localeCompare(b.name) : avg(a) - avg(b);
     return dir === 'asc' ? r : -r;
   });
+  const trendBtn = (
+    <button onClick={() => nav.push('trends')} aria-label="Category trends" style={{
+      width: 38, height: 38, borderRadius: 12, flexShrink: 0, cursor: 'pointer',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: T.surface, border: `1px solid ${T.line}`, color: T.accent, boxShadow: T.dark ? 'none' : T.cardShadow,
+    }}><UIIcon name="trend" size={20} stroke={T.accent} /></button>
+  );
   return (
     <Screen T={T}>
-      <AppHeader T={T} title="All categories" onBack={() => nav.pop()}
-        right={<PeriodPill T={T} period={period} onClick={onPeriod} inline />} />
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '18px 2px 14px' }}>
-        <span style={{ fontSize: 13.5, color: T.muted, fontWeight: 540 }}>{sorted.length} categories · AED {fmtAED(TOTAL)}</span>
+      <AppHeader T={T} title="Spend Categories" onBack={() => nav.pop()} right={trendBtn} />
+      <div style={{ marginTop: 18 }}>
+        <div style={{ fontSize: 13, color: T.muted, fontWeight: 540 }}>Total spend</div>
+        <div style={{ fontSize: 30, fontWeight: 720, color: T.ink, letterSpacing: '-0.03em', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ fontSize: 16, fontWeight: 600, color: T.muted, marginRight: 5 }}>AED</span>{fmtAED(TOTAL)}
+        </div>
       </div>
-      <div style={{ marginBottom: 16 }}><SortBar T={T} value={sort} dir={dir} onChange={setSortKey} /></div>
+      <div style={{ margin: '18px 0 4px' }}><PeriodPill T={T} period={period} onClick={onPeriod} inline /></div>
+      <div style={{ margin: '16px 0' }}><SortBar T={T} value={sort} dir={dir} onChange={setSortKey} /></div>
       <Card T={T} pad="2px 18px">
         {sorted.map((c, i, a) => (
-          <CategoryRow key={c.id} T={T} cat={c} total={TOTAL} onClick={() => nav.push('category', { id: c.id })} divider={i < a.length - 1} mode={sort === 'count' ? 'amount' : 'amount'} />
+          <CategoryRow key={c.id} T={T} cat={c} total={TOTAL} onClick={() => nav.openCategory(c.id)} divider={i < a.length - 1} />
         ))}
       </Card>
-      <button onClick={() => nav.push('categories')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', marginTop: 16, padding: '14px 0', borderRadius: 14, border: `1px solid ${T.line}`, cursor: 'pointer', background: T.surface, color: T.ink, fontSize: 14.5, fontWeight: 600, fontFamily: 'inherit', boxShadow: T.dark ? 'none' : T.cardShadow }}>
-        <UIIcon name="filter" size={17} stroke={T.accent} />Browse all categories
-      </button>
     </Screen>
   );
 }
@@ -2106,7 +2111,7 @@ function Trends({ T, nav, onPeriod, period }) {
       <div style={{ marginTop: 18 }}>
         <Card T={T} pad={20}>
           <div style={{ fontSize: 13.5, color: T.muted, fontWeight: 540, marginBottom: 18 }}>Categories ranked by spend · {period} · tap to drill in</div>
-          <RankedBars data={ranked} total={TOTAL} max={peak} dark={T.dark} ink={T.ink} muted={T.muted} onBar={(d) => nav.push('category', { id: d.id })} />
+          <RankedBars data={ranked} total={TOTAL} max={peak} dark={T.dark} ink={T.ink} muted={T.muted} onBar={(d) => nav.openCategory(d.id)} />
         </Card>
       </div>
       <SectionTitle T={T}>Movers vs previous period</SectionTitle>
@@ -2116,8 +2121,8 @@ function Trends({ T, nav, onPeriod, period }) {
           const delta = Math.round(((c.total - prev) / prev) * 100);
           const up = delta >= 0;
           return (
-            <div key={c.id} onClick={() => nav.push('category', { id: c.id })} style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '13px 0', cursor: 'pointer', position: 'relative' }}>
-              <CategoryMark glyph={c.glyph} color={c.color} dark={T.dark} size={40} radius={12} />
+            <div key={c.id} onClick={() => nav.openCategory(c.id)} style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '13px 0', cursor: 'pointer', position: 'relative' }}>
+              <CategoryMark glyph={c.glyph} color={c.color} dark={T.dark} size={40} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 15, fontWeight: 560, color: T.ink }}>{c.name}</div>
                 <div style={{ fontSize: 12.5, color: T.muted, marginTop: 2 }}>AED {fmtAED(c.total)}</div>
@@ -2132,7 +2137,7 @@ function Trends({ T, nav, onPeriod, period }) {
         })}
       </Card>
       <button onClick={() => nav.push('breakdown')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', marginTop: 16, padding: '14px 0', borderRadius: 14, border: `1px solid ${T.line}`, cursor: 'pointer', background: T.surface, color: T.ink, fontSize: 14.5, fontWeight: 600, fontFamily: 'inherit', boxShadow: T.dark ? 'none' : T.cardShadow }}>
-        <UIIcon name="sort" size={17} stroke={T.accent} />View as sortable list
+        <UIIcon name="filter" size={17} stroke={T.accent} />View spend categories
       </button>
     </Screen>
   );
@@ -2144,80 +2149,6 @@ Object.assign(window, { Overview, Breakdown, Trends, BreakdownHero });
 
 <script type="text/babel" data-presets="react">
 /* screens-detail.jsx — Category detail, All transactions, Categories guide, sheets. */
-
-function CategoryDetail({ T, id, showLogos, nav, onPeriod, period }) {
-  const { CATEGORY_SPEND, TOTAL, PREV, txnsForCategory, txnsForBrand, txnsForCategoryMonth, categoryMonths, MONTH_LABELS, MONTH_YEAR } = window.EXP_DATA;
-  const cat = CATEGORY_SPEND.find((c) => c.id === id) || CATEGORY_SPEND[0];
-  const txns = React.useMemo(() => txnsForCategory(cat.id), [cat.id]);
-  const [q, setQ] = React.useState('');
-  const [sort, setSort] = React.useState('amount');
-  const [dir, setDir] = React.useState('desc');
-  const setSortKey = (k) => { if (k === sort) setDir((d) => d === 'asc' ? 'desc' : 'asc'); else { setSort(k); setDir(k === 'name' ? 'asc' : 'desc'); } };
-
-  const { labels, vals } = React.useMemo(() => categoryMonths(cat.id), [cat.id]);
-  const prev = PREV[cat.id] || cat.total;
-  const delta = Math.round(((cat.total - prev) / prev) * 100);
-  const up = delta >= 0;
-  // Category drill-down is HISTORICAL — independent of the global timeframe.
-  const histTotal = vals.reduce((a, b) => a + b, 0);
-  const avgMonth = Math.round(histTotal / vals.length);
-
-  const filtered = txns
-    .filter((t) => t.merchant.toLowerCase().includes(q.toLowerCase()))
-    .sort((a, b) => {
-      let r = sort === 'name' ? a.merchant.localeCompare(b.merchant) : sort === 'count' ? Number(a.day) - Number(b.day) : a.amount - b.amount;
-      return dir === 'asc' ? r : -r;
-    });
-
-  const openMonth = (i) => nav.openTxnList({ title: `${cat.name}`, subtitle: `${labels[i]} ${MONTH_YEAR[i]} · ${vals[i] === Math.round(cat.total) ? 'this month' : 'monthly spend'}`, txns: txnsForCategoryMonth(cat.id, i) });
-  const openBrand = (b) => nav.openTxnList({ title: b.name, subtitle: `in ${cat.name}`, txns: txnsForBrand(cat.id, b.name) });
-
-  return (
-    <Screen T={T}>
-      <AppHeader T={T} title={cat.name} eyebrow="Historical spend" onBack={() => nav.pop()} />
-
-      <div style={{ marginTop: 18 }}>
-        <Card T={T} pad={20}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 13, marginBottom: 16 }}>
-            <CategoryMark glyph={cat.glyph} color={cat.color} dark={T.dark} size={46} radius={13} solid />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 28, fontWeight: 700, color: T.ink, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
-                <span style={{ fontSize: 15, fontWeight: 600, color: T.muted, marginRight: 5 }}>AED</span>{fmtAED(histTotal)}
-              </div>
-              <div style={{ fontSize: 13, color: T.muted, marginTop: 2 }}>Last 6 months · ~AED {fmtAED(avgMonth)}/mo</div>
-            </div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 640,
-              color: up ? T.posInk : T.negInk }}>
-              <UIIcon name={up ? 'arrowUp' : 'arrowDn'} size={14} stroke="currentColor" />{Math.abs(delta)}%
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 12, fontWeight: 640, letterSpacing: '0.04em', textTransform: 'uppercase', color: T.muted }}>Spend by month</span>
-            <span style={{ fontSize: 11, fontWeight: 580, color: T.muted, background: T.faint, padding: '4px 9px', borderRadius: 999 }}>All history · not filtered by timeframe</span>
-          </div>
-          <ColumnTrend values={vals} labels={labels} color={cat.color} dark={T.dark} ink={T.ink} muted={T.muted} height={124} onMonth={openMonth} />
-          <div style={{ fontSize: 11.5, color: T.muted, textAlign: 'center', marginTop: 12 }}>Tap a month to see its transactions</div>
-        </Card>
-      </div>
-
-      <SectionTitle T={T}>Brand trends</SectionTitle>
-      <Card T={T} pad={20}>
-        <div style={{ fontSize: 13, color: T.muted, fontWeight: 540, marginBottom: 16 }}>Where your {cat.name.toLowerCase()} spend goes · tap a brand</div>
-        <RankedBars data={cat.brands.map((b) => ({ ...b, color: cat.color }))} total={cat.total} max={cat.brands[0].total} dark={T.dark} ink={T.ink} muted={T.muted} onBar={openBrand} />
-      </Card>
-
-      <SectionTitle T={T}>Transactions</SectionTitle>
-      <SearchField T={T} value={q} onChange={setQ} placeholder={`Search ${cat.name.toLowerCase()}`} />
-      <div style={{ margin: '12px 0 16px' }}><SortBar T={T} value={sort} dir={dir} onChange={setSortKey} /></div>
-      <Card T={T} pad="2px 18px">
-        {filtered.length === 0 && <div style={{ padding: '26px 0', textAlign: 'center', color: T.muted, fontSize: 14 }}>No matches</div>}
-        {filtered.map((t, i, a) => (
-          <TxnRow key={t.id} T={T} txn={t} showLogos={showLogos} onClick={() => nav.openTxn(t)} divider={i < a.length - 1} />
-        ))}
-      </Card>
-    </Screen>
-  );
-}
 
 function AllTransactions({ T, showLogos, nav, onPeriod, period }) {
   const { TRANSACTIONS } = window.EXP_DATA;
@@ -2358,27 +2289,29 @@ function TxnDetailSheet({ T, txn, open, onClose, showLogos, onImprove }) {
 function PeriodSheet({ T, open, onClose, period, onPick }) {
   const { PERIODS, PERIOD_LABEL } = window.EXP_DATA;
   return (
-    <Sheet T={T} open={open} onClose={onClose} title="Timeframe">
+    <Sheet T={T} open={open} onClose={onClose} title="Select dates">
+      <div style={{ fontSize: 12.5, color: T.muted, marginBottom: 10 }}>Choose the date range for your spend</div>
       <Card T={T} pad="2px 18px">
         {PERIODS.map((p, i) => {
           const active = p === period;
           return (
-            <div key={p} onClick={() => { onPick(p); onClose(); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '15px 0', cursor: 'pointer', position: 'relative' }}>
-              <span style={{ fontSize: 15.5, color: T.ink, fontWeight: active ? 620 : 500 }}>{p}</span>
-              {active && <svg width="20" height="20" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7" fill="none" stroke={T.accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+            <div key={p} onClick={() => { onPick(p); onClose(); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 0', cursor: 'pointer', position: 'relative' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 15.5, color: T.ink, fontWeight: active ? 640 : 540 }}>{p}</div>
+                <div style={{ fontSize: 12.5, color: T.muted, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>{PERIOD_LABEL[p]}</div>
+              </div>
+              {active && <svg width="20" height="20" viewBox="0 0 24 24" style={{ flexShrink: 0 }}><path d="M5 12.5l4.5 4.5L19 7" fill="none" stroke={T.accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
               {i < PERIODS.length - 1 && <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 1, background: T.faint }} />}
             </div>
           );
         })}
       </Card>
-      <div style={{ textAlign: 'center', fontSize: 13, color: T.muted, marginTop: 16 }}>{PERIOD_LABEL[period]}</div>
-      <div style={{ textAlign: 'center', fontSize: 12, color: T.muted, marginTop: 6 }}>Applies across Spends and Category trends</div>
       <button onClick={onClose} style={{ width: '100%', marginTop: 16, padding: '14px 0', borderRadius: 14, border: 'none', cursor: 'pointer', background: T.accent, color: '#fff', fontSize: 15, fontWeight: 620, fontFamily: 'inherit' }}>Done</button>
     </Sheet>
   );
 }
 
-Object.assign(window, { CategoryDetail, AllTransactions, CategoriesGuide, TxnDetailSheet, PeriodSheet, SearchField, SortChip });
+Object.assign(window, { AllTransactions, CategoriesGuide, TxnDetailSheet, PeriodSheet, SearchField, SortChip });
 
 </script>
 
@@ -2416,6 +2349,15 @@ function ExpensesApp() {
     openTxn(tx) { setTxn(tx); setTxnOpen(true); },
     openTxnList(payload) { setList(payload); setListOpen(true); },
     openFeedback(tx) { setFbTxn(tx); setFbOpen(true); },
+    // Tapping a category (pie segment or breakdown tile) opens its transactions,
+    // mirroring the SDK (categoryIDForPreview / categoryStagedForPreview → TransactionListView).
+    openCategory(id) {
+      const D = window.EXP_DATA;
+      const cat = D.CATEGORY_SPEND.find((c) => c.id === id);
+      if (!cat) return;
+      setList({ title: cat.name, subtitle: `${cat.count} transactions`, txns: D.txnsForCategory(id) });
+      setListOpen(true);
+    },
   }), []);
 
   const top = stack[stack.length - 1];
@@ -2429,7 +2371,6 @@ function ExpensesApp() {
       case 'overview': return <Overview {...common} greeting="Good evening, Layla" />;
       case 'breakdown': return <Breakdown {...common} />;
       case 'trends': return <Trends {...common} />;
-      case 'category': return <CategoryDetail {...common} id={top.params.id} />;
       case 'allTxns': return <AllTransactions {...common} />;
       case 'categories': return <CategoriesGuide {...common} />;
       default: return <Overview {...common} greeting="Good evening, Layla" />;
