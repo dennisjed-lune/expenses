@@ -66,31 +66,69 @@
   const BRANDS = {
     6:  [ { name: 'Carrefour', total: 1284.40, count: 9 }, { name: 'Spinneys', total: 962.10, count: 6 },
           { name: 'Lulu Hypermarket', total: 548.75, count: 5 }, { name: 'Waitrose', total: 301.20, count: 3 },
-          { name: 'Organic Foods', total: 168.90, count: 2 } ],
+          { name: 'Organic Foods', total: 168.90, count: 2 }, { name: 'Choithrams', total: 142.60, count: 3 },
+          { name: 'Union Coop', total: 128.40, count: 2 }, { name: 'Géant', total: 96.30, count: 2 },
+          { name: 'West Zone', total: 64.20, count: 2 }, { name: 'Al Maya', total: 52.10, count: 1 },
+          { name: 'Grandiose', total: 41.00, count: 1 } ],
     10: [ { name: 'Talabat', total: 742.30, count: 14 }, { name: 'Allo Beirut', total: 412.60, count: 5 },
-          { name: 'Starbucks', total: 388.00, count: 11 }, { name: 'Shake Shack', total: 246.50, count: 4 },
-          { name: 'Pret A Manger', total: 198.75, count: 6 }, { name: 'Zomato', total: 191.40, count: 3 } ],
+          { name: 'Deliveroo', total: 388.20, count: 7 }, { name: 'Starbucks', total: 388.00, count: 11 },
+          { name: 'Shake Shack', total: 246.50, count: 4 }, { name: 'PF Chang\'s', total: 210.00, count: 2 },
+          { name: 'Pret A Manger', total: 198.75, count: 6 }, { name: 'Zomato', total: 191.40, count: 3 },
+          { name: 'Five Guys', total: 164.00, count: 2 }, { name: 'Costa Coffee', total: 132.50, count: 5 },
+          { name: 'Tim Hortons', total: 96.40, count: 4 }, { name: 'Operation Falafel', total: 88.30, count: 3 },
+          { name: 'McDonald\'s', total: 74.20, count: 3 } ],
     11: [ { name: 'Noon', total: 984.20, count: 6 }, { name: 'Apple Store', total: 749.00, count: 1 },
-          { name: 'Amazon.ae', total: 712.55, count: 5 }, { name: 'Sharaf DG', total: 318.40, count: 2 },
-          { name: 'Faces', total: 246.90, count: 2 }, { name: 'Namshi', total: 201.30, count: 3 } ],
+          { name: 'Amazon.ae', total: 712.55, count: 5 }, { name: 'IKEA', total: 388.00, count: 1 },
+          { name: 'Sharaf DG', total: 318.40, count: 2 }, { name: 'Ounass', total: 312.00, count: 1 },
+          { name: 'Faces', total: 246.90, count: 2 }, { name: 'Zara', total: 224.90, count: 2 },
+          { name: 'Namshi', total: 201.30, count: 3 }, { name: 'Centrepoint', total: 174.50, count: 2 },
+          { name: 'H&M', total: 156.30, count: 2 }, { name: 'Jumbo Electronics', total: 142.00, count: 1 },
+          { name: 'Max Fashion', total: 132.00, count: 2 }, { name: 'Virgin Megastore', total: 98.40, count: 2 } ],
     14: [ { name: 'Careem', total: 486.90, count: 18 }, { name: 'ADNOC', total: 420.00, count: 6 },
           { name: 'Salik', total: 224.00, count: 14 }, { name: 'RTA Nol', total: 186.50, count: 9 },
-          { name: 'ENOC', total: 152.30, count: 2 }, { name: 'Uber', total: 132.30, count: 4 } ],
+          { name: 'ENOC', total: 152.30, count: 2 }, { name: 'Dubai Taxi', total: 142.60, count: 6 },
+          { name: 'Uber', total: 132.30, count: 4 }, { name: 'Emarat', total: 110.00, count: 2 },
+          { name: 'EPPCO', total: 98.40, count: 2 }, { name: 'Yango', total: 88.20, count: 4 },
+          { name: 'Parkin', total: 64.00, count: 8 } ],
     9:  [ { name: 'DEWA', total: 742.85, count: 1 }, { name: 'Etisalat', total: 525.00, count: 1 },
-          { name: 'du', total: 389.00, count: 1 }, { name: 'Emaar Community', total: 240.00, count: 1 } ],
-    15: [ { name: 'Emirates', total: 2480.00, count: 1 }, { name: 'Booking.com', total: 864.50, count: 1 } ],
-    7:  [ { name: 'Dr. Sulaiman Al Habib', total: 320.00, count: 1 }, { name: 'Fitness First', total: 350.00, count: 1 },
-          { name: 'Aster Pharmacy', total: 214.60, count: 4 }, { name: 'The Grooming Co.', total: 180.00, count: 2 } ],
-    4:  [ { name: 'Yas Waterworld', total: 305.00, count: 1 }, { name: 'PlayStation', total: 229.00, count: 2 },
-          { name: 'VOX Cinemas', total: 184.00, count: 3 }, { name: 'OSN+', total: 99.00, count: 1 },
-          { name: 'Netflix', total: 56.99, count: 1 }, { name: 'Anghami', total: 21.00, count: 1 }, { name: 'Spotify', total: 19.99, count: 1 } ],
-    16: [ { name: 'Emirates NBD Loan', total: 1200.00, count: 1 } ],
-    17: [ { name: 'Daman Health', total: 480.00, count: 1 } ],
-    1:  [ { name: 'Tabby', total: 312.40, count: 2 }, { name: 'Al Ansari Exchange', total: 200.00, count: 1 } ],
-    5:  [ { name: 'RTA Fines', total: 200.00, count: 1 }, { name: 'DubaiNow', total: 150.00, count: 2 } ],
-    3:  [ { name: 'Coursera', total: 156.00, count: 1 }, { name: 'Udemy', total: 89.00, count: 1 } ],
-    18: [ { name: 'Adobe', total: 74.99, count: 1 }, { name: 'Notion', total: 40.00, count: 1 }, { name: 'iCloud+', total: 11.99, count: 1 } ],
-    19: [ { name: 'Unclassified', total: 90.00, count: 2 } ],
+          { name: 'du', total: 389.00, count: 1 }, { name: 'Emaar Community', total: 240.00, count: 1 },
+          { name: 'SEWA', total: 180.00, count: 1 }, { name: 'Tadweer', total: 95.00, count: 1 },
+          { name: 'Virgin Mobile', total: 60.00, count: 1 } ],
+    15: [ { name: 'Emirates', total: 2480.00, count: 1 }, { name: 'Etihad', total: 1280.00, count: 1 },
+          { name: 'Jumeirah', total: 980.00, count: 1 }, { name: 'Booking.com', total: 864.50, count: 1 },
+          { name: 'Rotana Hotels', total: 720.00, count: 1 }, { name: 'flydubai', total: 642.00, count: 1 },
+          { name: 'Agoda', total: 512.30, count: 1 }, { name: 'Almosafer', total: 430.00, count: 1 },
+          { name: 'Air Arabia', total: 388.00, count: 1 }, { name: 'Wego', total: 156.00, count: 1 } ],
+    7:  [ { name: 'Mediclinic', total: 410.00, count: 1 }, { name: 'Fitness First', total: 350.00, count: 1 },
+          { name: 'Dr. Sulaiman Al Habib', total: 320.00, count: 1 }, { name: 'Warehouse Gym', total: 220.00, count: 1 },
+          { name: 'Aster Pharmacy', total: 214.60, count: 4 }, { name: 'The Grooming Co.', total: 180.00, count: 2 },
+          { name: 'GMC Clinics', total: 168.00, count: 1 }, { name: 'Life Pharmacy', total: 142.30, count: 3 },
+          { name: 'BinSina Pharmacy', total: 96.40, count: 2 } ],
+    4:  [ { name: 'Yas Waterworld', total: 305.00, count: 1 }, { name: 'IMG Worlds', total: 240.00, count: 1 },
+          { name: 'PlayStation', total: 229.00, count: 2 }, { name: 'VOX Cinemas', total: 184.00, count: 3 },
+          { name: 'Reel Cinemas', total: 132.00, count: 2 }, { name: 'OSN+', total: 99.00, count: 1 },
+          { name: 'Roxy Cinemas', total: 96.00, count: 1 }, { name: 'Steam', total: 88.00, count: 2 },
+          { name: 'Netflix', total: 56.99, count: 1 }, { name: 'Anghami', total: 21.00, count: 1 },
+          { name: 'Spotify', total: 19.99, count: 1 } ],
+    1:  [ { name: 'Tabby', total: 312.40, count: 2 }, { name: 'Al Ansari Exchange', total: 200.00, count: 1 },
+          { name: 'Tamara', total: 188.00, count: 2 }, { name: 'Beehive', total: 140.00, count: 1 },
+          { name: 'PostPay', total: 96.00, count: 1 } ],
+    16: [ { name: 'Emirates NBD Loan', total: 1200.00, count: 1 }, { name: 'ADCB Personal Loan', total: 880.00, count: 1 },
+          { name: 'DIB Finance', total: 640.00, count: 1 } ],
+    17: [ { name: 'Daman Health', total: 480.00, count: 1 }, { name: 'AXA', total: 320.00, count: 1 },
+          { name: 'Orient Insurance', total: 264.00, count: 1 }, { name: 'Sukoon', total: 198.00, count: 1 },
+          { name: 'Salama', total: 156.00, count: 1 } ],
+    5:  [ { name: 'RTA Fines', total: 200.00, count: 1 }, { name: 'DubaiNow', total: 150.00, count: 2 },
+          { name: 'GDRFA', total: 120.00, count: 1 }, { name: 'MOI Fines', total: 90.00, count: 1 },
+          { name: 'Dubai Police', total: 60.00, count: 1 } ],
+    3:  [ { name: 'Udacity', total: 210.00, count: 1 }, { name: 'Coursera', total: 156.00, count: 1 },
+          { name: 'Udemy', total: 89.00, count: 1 }, { name: 'Skillshare', total: 72.00, count: 1 } ],
+    18: [ { name: 'Adobe', total: 74.99, count: 1 }, { name: 'ChatGPT', total: 73.40, count: 1 },
+          { name: 'Microsoft 365', total: 47.00, count: 1 }, { name: 'Canva', total: 45.00, count: 1 },
+          { name: 'Notion', total: 40.00, count: 1 }, { name: 'Dropbox', total: 39.99, count: 1 },
+          { name: 'Google One', total: 31.99, count: 1 }, { name: 'iCloud+', total: 11.99, count: 1 } ],
+    19: [ { name: 'ATM Withdrawal', total: 600.00, count: 3 }, { name: 'Misc POS', total: 142.00, count: 4 },
+          { name: 'Unclassified', total: 90.00, count: 2 } ],
   };
 
   const MERCHANT_CAT = {};
@@ -105,17 +143,24 @@
 
   const TOTAL = Math.round(CATEGORY_SPEND.reduce((s, c) => s + c.total, 0) * 100) / 100;
   // previous-period totals (for trend deltas / movers)
-  const PREV = { 6: 3010, 10: 2456, 11: 2710, 14: 1702, 9: 2080, 15: 2890, 7: 824, 4: 1120, 16: 1200, 17: 0, 1: 410, 5: 90, 3: 320, 18: 110, 2: 60, 19: 140 };
+  const PREV = { 6: 3550, 10: 3100, 11: 4500, 14: 2000, 9: 2100, 15: 8000, 7: 1950, 4: 1380, 16: 2900, 17: 1300, 1: 870, 5: 580, 3: 560, 18: 330, 19: 900 };
 
-  const MONTH_LABELS = ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'];
-  const MONTH_YEAR  = ['2025', '2026', '2026', '2026', '2026', '2026'];
+  const MONTH_LABELS = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+  const MONTH_YEAR  = ['2025', '2025', '2025', '2025', '2025', '2025', '2026', '2026', '2026', '2026', '2026', '2026'];
 
   function categoryMonths(cid) {
     const cat = CATEGORY_SPEND.find((c) => c.id === cid);
     let seed = cid * 131 + 7;
     const vals = MONTH_LABELS.map(() => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return Math.round(cat.total * (0.6 + (seed % 1000) / 1000 * 0.65)); });
-    vals[5] = Math.round(cat.total);
+    vals[vals.length - 1] = Math.round(cat.total);
     return { labels: MONTH_LABELS, vals };
+  }
+
+  // Total spend per month across all categories (historical; not timeframe-scaled).
+  function monthlyTotals() {
+    const vals = MONTH_LABELS.map(() => 0);
+    CATEGORY_SPEND.forEach((c) => { const m = categoryMonths(c.id).vals; m.forEach((v, i) => { vals[i] += v; }); });
+    return { labels: MONTH_LABELS, vals: vals.map((v) => Math.round(v)) };
   }
 
   function fmtDate(d, m = 'May', y = '2026') { return `${d} ${m} ${y}`; }
@@ -196,7 +241,7 @@
     const b = (BRANDS[cid] || []).find((x) => x.name === brandName) || { total: 0 };
     let seed = (cid * 53 + brandName.length * 17 + 11);
     const vals = MONTH_LABELS.map(() => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return Math.round(b.total * (0.5 + (seed % 1000) / 1000 * 0.8)); });
-    vals[5] = Math.round(b.total);
+    vals[vals.length - 1] = Math.round(b.total);
     return { labels: MONTH_LABELS, vals };
   }
 
@@ -207,17 +252,30 @@
   // sub-linear, since real spend isn't perfectly uniform). The category
   // drill-down is intentionally NOT scaled — it shows historical monthly
   // spend regardless of the selected timeframe.
-  const PERIODS = ['Last 30 days', 'Last 3 months', 'Last 6 months', 'Last 12 months'];
-  const PERIOD_MULT = { 'Last 30 days': 1, 'Last 3 months': 2.9, 'Last 6 months': 5.7, 'Last 12 months': 11.2 };
-  const PERIOD_LABEL = {
-    'Last 30 days': '30 May – 28 Jun 2026',
-    'Last 3 months': '29 Mar – 28 Jun 2026',
-    'Last 6 months': '29 Dec 2025 – 28 Jun 2026',
-    'Last 12 months': '29 Jun 2025 – 28 Jun 2026',
-  };
+  // A timeframe is a real date range: { startMs, endMs, days, mult, label }.
+  // It's a GLOBAL filter that scales aggregate spend (base = ~30 days; longer
+  // ranges scale up). The historical "Spending over time" view ignores it.
+  const ANCHOR = new Date(2026, 5, 28); // "today" = 28 Jun 2026
+  const MO = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const DAY_MS = 86400000;
+  function fmtDay(d, withYear) { return `${d.getDate()} ${MO[d.getMonth()]}${withYear ? ' ' + d.getFullYear() : ''}`; }
+  function rangeLabel(s, e) {
+    const sameYear = s.getFullYear() === e.getFullYear();
+    return `${fmtDay(s, !sameYear)} – ${fmtDay(e, true)}`;
+  }
+  function makePeriod(start, end) {
+    const s = new Date(start), e = new Date(end);
+    const days = Math.max(1, Math.round((e - s) / DAY_MS) + 1);
+    return { startMs: +s, endMs: +e, days, mult: Math.max(0.2, days / 30), label: rangeLabel(s, e) };
+  }
+  function periodOfDays(days) { const e = new Date(ANCHOR); const s = new Date(ANCHOR); s.setDate(e.getDate() - (days - 1)); return makePeriod(s, e); }
+  const PERIOD_PRESETS = [
+    { key: 'Last 30 days', days: 30 }, { key: 'Last 3 months', days: 91 },
+    { key: 'Last 6 months', days: 182 }, { key: 'Last 12 months', days: 365 },
+  ].map((p) => ({ ...p, period: periodOfDays(p.days) }));
 
   function forPeriod(period) {
-    const m = PERIOD_MULT[period] || 1;
+    const m = (period && period.mult) || 1;
     const r2 = (n) => Math.round(n * 100) / 100;
     const cats = CATEGORY_SPEND.map((c) => ({
       ...c,
@@ -228,16 +286,15 @@
     const total = r2(cats.reduce((s, c) => s + c.total, 0));
     const prev = {};
     Object.keys(PREV).forEach((k) => { prev[k] = PREV[k] * m; });
-    return { CATEGORY_SPEND: cats, TOTAL: total, PREV: prev, TRANSACTIONS, DATE_LABEL: PERIOD_LABEL[period] || '', mult: m };
+    return { CATEGORY_SPEND: cats, TOTAL: total, PREV: prev, TRANSACTIONS, mult: m };
   }
 
   window.EXP_DATA = {
     CATEGORIES, BRANDS, CATEGORY_SPEND, TOTAL, PREV, TRANSACTIONS, MERCHANT_CAT,
     MONTH_LABELS, MONTH_YEAR,
-    txnsForCategory, txnsForBrand, txnsForCategoryMonth, categoryMonths, brandMonths,
-    forPeriod, PERIODS, PERIOD_LABEL,
-    CURRENT_PERIOD: 'Last 30 days',
-    DATE_LABEL: PERIOD_LABEL['Last 30 days'],
+    txnsForCategory, txnsForBrand, txnsForCategoryMonth, categoryMonths, brandMonths, monthlyTotals,
+    forPeriod, PERIOD_PRESETS, makePeriod, periodOfDays, ANCHOR_MS: +ANCHOR,
+    CURRENT_PERIOD: periodOfDays(30),
   };
 })();
 
@@ -1539,25 +1596,28 @@ function StackedBar({ data, total, dark = false, onSeg, ink, muted }) {
 }
 
 // ── COLUMN TREND (clickable months + hover) ─────────────────────────
-function ColumnTrend({ values, labels, color, dark = false, ink, muted, height = 120, onMonth, activeIdx }) {
+function ColumnTrend({ values, labels, color, dark = false, ink, muted, height = 120, onMonth, activeIdx, solid = false }) {
   const [hot, setHot] = chUseState(null);
   const peak = Math.max(...values);
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height }}>
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 5, height }}>
       {values.map((v, i) => {
         const h = (v / peak) * (height - 34);
         const isLast = i === values.length - 1;
         const selected = activeIdx === i;
-        const lit = hot === i || selected || (hot == null && activeIdx == null && isLast);
+        const lit = solid || hot === i || selected || (hot == null && activeIdx == null && isLast);
+        // Only the active column shows its value (and only when not in solid mode),
+        // so the nowrap amount never forces the 12 columns to overflow.
+        const showVal = !solid && (hot === i || selected || (hot == null && activeIdx == null && isLast));
         return (
           <div key={i} onClick={() => onMonth && onMonth(i)}
             onMouseEnter={() => setHot(i)} onMouseLeave={() => setHot(null)}
-            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%', cursor: onMonth ? 'pointer' : 'default', borderRadius: 9, padding: '4px 0',
+            style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%', cursor: onMonth ? 'pointer' : 'default', borderRadius: 9, padding: '4px 0',
               background: hot === i ? (dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)') : 'transparent', transition: 'background .15s' }}>
-            <span style={{ fontSize: 10, fontWeight: 600, color: muted, marginBottom: 5, opacity: lit ? 1 : 0, transition: 'opacity .15s', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{fmtAED(v)}</span>
-            <div style={{ width: '100%', maxWidth: 34, height: h, borderRadius: 7, background: lit ? color : (dark ? 'rgba(255,255,255,0.13)' : 'rgba(0,0,0,0.08)'),
-              transition: 'background .15s', transformOrigin: 'bottom center', animation: `growY .7s cubic-bezier(.22,1,.36,1) ${i * 0.06}s both` }} />
-            <span style={{ fontSize: 10.5, color: lit ? ink : muted, marginTop: 8, fontWeight: lit ? 600 : 520, transition: 'color .15s' }}>{labels[i]}</span>
+            {showVal && <span style={{ position: 'absolute', top: 0, fontSize: 10, fontWeight: 600, color: ink, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{fmtAED(v)}</span>}
+            <div style={{ width: '100%', maxWidth: 30, height: h, borderRadius: 6, background: lit ? color : (dark ? 'rgba(255,255,255,0.13)' : 'rgba(0,0,0,0.08)'),
+              transition: 'background .15s', transformOrigin: 'bottom center', animation: `growY .7s cubic-bezier(.22,1,.36,1) ${i * 0.05}s both` }} />
+            <span style={{ fontSize: 10, color: lit && !solid ? ink : muted, marginTop: 7, fontWeight: 540, transition: 'color .15s' }}>{labels[i]}</span>
           </div>
         );
       })}
@@ -1664,7 +1724,7 @@ function PeriodPill({ T, period, onClick, inline }) {
       fontSize: 13.5, fontWeight: 580, boxShadow: T.dark ? 'none' : T.cardShadow,
     }}>
       <span style={{ color: T.accent, display: 'flex' }}><UIIcon name="calendar" size={16} stroke={T.accent} /></span>
-      {(window.EXP_DATA.PERIOD_LABEL && window.EXP_DATA.PERIOD_LABEL[period]) || period}
+      {period && period.label}
       <UIIcon name="chevD" size={15} stroke={T.muted} />
     </button>
   );
@@ -2054,6 +2114,17 @@ function Overview({ T, showLogos, nav, onPeriod, period, greeting }) {
         </div>
       </button>
 
+      <button onClick={() => nav.push('history')} style={{ display: 'flex', alignItems: 'center', gap: 14, width: '100%', marginTop: 12, padding: 18, borderRadius: 20, border: `1px solid ${T.line}`, cursor: 'pointer', background: T.surface, color: T.ink, textAlign: 'left', fontFamily: 'inherit', boxShadow: T.dark ? 'none' : T.cardShadow }}>
+        <div style={{ width: 44, height: 44, borderRadius: 14, background: hexA(T.accent, T.dark ? 0.28 : 0.13), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <UIIcon name="calendar" size={22} stroke={T.accent} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 16, fontWeight: 680, letterSpacing: '-0.01em' }}>Spending over time</div>
+          <div style={{ fontSize: 12.5, fontWeight: 500, color: T.muted, marginTop: 2 }}>See your spend month by month</div>
+        </div>
+        <UIIcon name="chevR" size={20} stroke={T.muted} />
+      </button>
+
       <SectionTitle T={T} action="View all" onAction={() => nav.push('allTxns')}>Transactions</SectionTitle>
       <Card T={T} pad="2px 18px">
         {TRANSACTIONS.slice(0, 5).map((t, i, a) => (
@@ -2110,7 +2181,7 @@ function Trends({ T, nav, onPeriod, period }) {
       <AppHeader T={T} title="Category trends" onBack={() => nav.pop()} period={period} onPeriod={onPeriod} />
       <div style={{ marginTop: 18 }}>
         <Card T={T} pad={20}>
-          <div style={{ fontSize: 13.5, color: T.muted, fontWeight: 540, marginBottom: 18 }}>Categories ranked by spend · {period} · tap to drill in</div>
+          <div style={{ fontSize: 13.5, color: T.muted, fontWeight: 540, marginBottom: 18 }}>Categories ranked by spend · tap to drill in</div>
           <RankedBars data={ranked} total={TOTAL} max={peak} dark={T.dark} ink={T.ink} muted={T.muted} onBar={(d) => nav.openCategory(d.id)} />
         </Card>
       </div>
@@ -2187,7 +2258,63 @@ function BrandTrends({ T, nav, onPeriod, period, showLogos, id }) {
   );
 }
 
-Object.assign(window, { Overview, Breakdown, Trends, BreakdownHero, BrandTrends });
+// Spending over time — historical view (NOT timeframe-scaled): total monthly
+// bar chart + categories underneath. Tap a category for its own spend history.
+function SpendHistory({ T, nav }) {
+  const { monthlyTotals, CATEGORY_SPEND, TOTAL } = window.EXP_DATA;
+  const { labels, vals } = monthlyTotals();
+  const cats = [...CATEGORY_SPEND].sort((a, b) => b.total - a.total);
+  return (
+    <Screen T={T}>
+      <AppHeader T={T} title="Spending over time" eyebrow="Historical" onBack={() => nav.pop()} />
+      <div style={{ marginTop: 18 }}>
+        <Card T={T} pad={20}>
+          <div style={{ fontSize: 13, color: T.muted, fontWeight: 540 }}>Total spend per month</div>
+          <div style={{ fontSize: 12, color: T.muted, marginTop: 2, marginBottom: 18 }}>Last 12 months · all history</div>
+          <ColumnTrend values={vals} labels={labels} color={T.accent} dark={T.dark} ink={T.ink} muted={T.muted} height={156} solid />
+        </Card>
+      </div>
+      <SectionTitle T={T}>Categories</SectionTitle>
+      <Card T={T} pad="2px 18px">
+        {cats.map((c, i, a) => (
+          <CategoryRow key={c.id} T={T} cat={c} total={TOTAL} onClick={() => nav.push('categoryHistory', { id: c.id })} divider={i < a.length - 1} />
+        ))}
+      </Card>
+    </Screen>
+  );
+}
+
+function CategoryHistory({ T, nav, id }) {
+  const { CATEGORY_SPEND, categoryMonths, txnsForCategoryMonth, MONTH_YEAR } = window.EXP_DATA;
+  const cat = CATEGORY_SPEND.find((c) => c.id === id) || CATEGORY_SPEND[0];
+  const { labels, vals } = categoryMonths(cat.id);
+  const openMonth = (i) => nav.openTxnList({ title: cat.name, subtitle: `${labels[i]} ${MONTH_YEAR[i]}`, txns: txnsForCategoryMonth(cat.id, i) });
+  return (
+    <Screen T={T}>
+      <AppHeader T={T} title={cat.name} eyebrow="Spending over time" onBack={() => nav.pop()} />
+      <div style={{ marginTop: 18 }}>
+        <Card T={T} pad={20}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 13, marginBottom: 18 }}>
+            <CategoryMark glyph={cat.glyph} color={cat.color} dark={T.dark} size={46} solid />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 24, fontWeight: 720, color: T.ink, letterSpacing: '-0.025em', fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: T.muted, marginRight: 4 }}>AED</span>{fmtAED(cat.total)}
+              </div>
+              <div style={{ fontSize: 12.5, color: T.muted, marginTop: 2 }}>Typical month · {cat.count} transactions</div>
+            </div>
+          </div>
+          <ColumnTrend values={vals} labels={labels} color={cat.color} dark={T.dark} ink={T.ink} muted={T.muted} height={156} onMonth={openMonth} solid />
+          <div style={{ fontSize: 11.5, color: T.muted, textAlign: 'center', marginTop: 12 }}>Spend over the last 12 months · tap a month for its transactions</div>
+        </Card>
+      </div>
+      <button onClick={() => nav.push('brandTrends', { id: cat.id })} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', marginTop: 16, padding: '14px 0', borderRadius: 14, border: `1px solid ${T.line}`, cursor: 'pointer', background: T.surface, color: T.ink, fontSize: 14.5, fontWeight: 600, fontFamily: 'inherit', boxShadow: T.dark ? 'none' : T.cardShadow }}>
+        <UIIcon name="trend" size={17} stroke={T.accent} />View brand trends
+      </button>
+    </Screen>
+  );
+}
+
+Object.assign(window, { Overview, Breakdown, Trends, BreakdownHero, BrandTrends, SpendHistory, CategoryHistory });
 
 </script>
 
@@ -2330,27 +2457,89 @@ function TxnDetailSheet({ T, txn, open, onClose, showLogos, onImprove }) {
   );
 }
 
+// Date-range picker: quick presets + a tap-to-select calendar (start → end).
 function PeriodSheet({ T, open, onClose, period, onPick }) {
-  const { PERIODS, PERIOD_LABEL } = window.EXP_DATA;
+  const { PERIOD_PRESETS, makePeriod, ANCHOR_MS } = window.EXP_DATA;
+  const anchor = new Date(ANCHOR_MS);
+  const monthStart = (d) => new Date(d.getFullYear(), d.getMonth(), 1);
+  const [view, setView] = React.useState(() => monthStart(anchor));
+  const [start, setStart] = React.useState(period ? period.startMs : null);
+  const [end, setEnd] = React.useState(period ? period.endMs : null);
+
+  React.useEffect(() => { if (open) { setStart(period ? period.startMs : null); setEnd(period ? period.endMs : null); setView(monthStart(period ? new Date(period.endMs) : anchor)); } }, [open]);
+
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  const y = view.getFullYear(), m = view.getMonth();
+  const firstDow = new Date(y, m, 1).getDay();
+  const numDays = new Date(y, m + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < firstDow; i++) cells.push(null);
+  for (let d = 1; d <= numDays; d++) cells.push(d);
+
+  const lo = start != null && end != null ? Math.min(start, end) : start;
+  const hi = start != null && end != null ? Math.max(start, end) : start;
+  const dayMs = (d) => +new Date(y, m, d);
+
+  const tapDay = (d) => {
+    const ms = dayMs(d);
+    if (ms > ANCHOR_MS) return;
+    if (start == null || end != null) { setStart(ms); setEnd(null); }
+    else if (ms < start) { setEnd(start); setStart(ms); }
+    else setEnd(ms);
+  };
+  const applyPreset = (p) => { setStart(p.period.startMs); setEnd(p.period.endMs); setView(monthStart(new Date(p.period.endMs))); };
+  const apply = () => { const s = start, e = end != null ? end : start; if (s == null) return; onPick(makePeriod(Math.min(s, e), Math.max(s, e))); onClose(); };
+  const prevMonth = () => setView(new Date(y, m - 1, 1));
+  const nextMonth = () => { const nv = new Date(y, m + 1, 1); if (nv <= monthStart(anchor)) setView(nv); };
+  const atLatest = y === anchor.getFullYear() && m === anchor.getMonth();
+  const summary = start == null ? 'Select a start date' : (end == null ? makePeriod(start, start).label + ' — pick end date' : makePeriod(lo, hi).label);
+  const navBtn = (dir, disabled, onClick) => (
+    <button onClick={disabled ? undefined : onClick} disabled={disabled} style={{ width: 34, height: 34, borderRadius: 999, border: `1px solid ${T.line}`, background: T.surface, color: T.ink, cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.35 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <UIIcon name={dir} size={18} stroke={T.ink} />
+    </button>
+  );
+
   return (
     <Sheet T={T} open={open} onClose={onClose} title="Select dates">
-      <div style={{ fontSize: 12.5, color: T.muted, marginBottom: 10 }}>Choose the date range for your spend</div>
-      <Card T={T} pad="2px 18px">
-        {PERIODS.map((p, i) => {
-          const active = p === period;
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+        {PERIOD_PRESETS.map((p) => {
+          const active = period && period.days === p.period.days;
           return (
-            <div key={p} onClick={() => { onPick(p); onClose(); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 0', cursor: 'pointer', position: 'relative' }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 15.5, color: T.ink, fontWeight: active ? 640 : 540 }}>{p}</div>
-                <div style={{ fontSize: 12.5, color: T.muted, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>{PERIOD_LABEL[p]}</div>
-              </div>
-              {active && <svg width="20" height="20" viewBox="0 0 24 24" style={{ flexShrink: 0 }}><path d="M5 12.5l4.5 4.5L19 7" fill="none" stroke={T.accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-              {i < PERIODS.length - 1 && <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 1, background: T.faint }} />}
-            </div>
+            <button key={p.key} onClick={() => applyPreset(p)} style={{ border: `1px solid ${active ? 'transparent' : T.line}`, borderRadius: 999, padding: '7px 12px', cursor: 'pointer', background: active ? T.accent : T.surface, color: active ? '#fff' : T.ink, fontSize: 12.5, fontWeight: 580, fontFamily: 'inherit' }}>{p.key}</button>
           );
         })}
+      </div>
+
+      <Card T={T} pad={16}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          {navBtn('chevL', false, prevMonth)}
+          <div style={{ fontSize: 15.5, fontWeight: 680, color: T.ink }}>{MONTHS[m]} {y}</div>
+          {navBtn('chevR', atLatest, nextMonth)}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2 }}>
+          {DOW.map((d, i) => <div key={'h' + i} style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: T.muted, paddingBottom: 6 }}>{d}</div>)}
+          {cells.map((d, i) => {
+            if (d == null) return <div key={'e' + i} />;
+            const ms = dayMs(d);
+            const future = ms > ANCHOR_MS;
+            const isEnd = ms === lo || ms === hi;
+            const within = lo != null && hi != null && ms >= lo && ms <= hi;
+            return (
+              <button key={'d' + i} onClick={() => tapDay(d)} disabled={future} style={{
+                height: 38, border: 'none', cursor: future ? 'default' : 'pointer', fontFamily: 'inherit',
+                fontSize: 13.5, fontWeight: isEnd ? 680 : 500,
+                background: isEnd ? T.accent : within ? hexA(T.accent, T.dark ? 0.28 : 0.14) : 'transparent',
+                color: isEnd ? '#fff' : future ? T.muted : T.ink, opacity: future ? 0.3 : 1,
+                borderRadius: isEnd ? 999 : within ? 8 : 999,
+              }}>{d}</button>
+            );
+          })}
+        </div>
       </Card>
-      <button onClick={onClose} style={{ width: '100%', marginTop: 16, padding: '14px 0', borderRadius: 14, border: 'none', cursor: 'pointer', background: T.accent, color: '#fff', fontSize: 15, fontWeight: 620, fontFamily: 'inherit' }}>Done</button>
+
+      <div style={{ textAlign: 'center', fontSize: 13, color: T.muted, margin: '14px 0', fontVariantNumeric: 'tabular-nums' }}>{summary}</div>
+      <button onClick={apply} disabled={start == null} style={{ width: '100%', padding: '14px 0', borderRadius: 14, border: 'none', cursor: start == null ? 'default' : 'pointer', background: start == null ? hexA(T.accent, 0.4) : T.accent, color: '#fff', fontSize: 15, fontWeight: 620, fontFamily: 'inherit' }}>Apply</button>
     </Sheet>
   );
 }
@@ -2411,6 +2600,8 @@ function ExpensesApp() {
       case 'breakdown': return <Breakdown {...common} />;
       case 'trends': return <Trends {...common} />;
       case 'brandTrends': return <BrandTrends {...common} id={top.params.id} />;
+      case 'history': return <SpendHistory {...common} />;
+      case 'categoryHistory': return <CategoryHistory {...common} id={top.params.id} />;
       case 'allTxns': return <AllTransactions {...common} />;
       case 'categories': return <CategoriesGuide {...common} />;
       default: return <Overview {...common} greeting="Good evening, Layla" />;
