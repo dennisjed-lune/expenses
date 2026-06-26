@@ -2143,7 +2143,51 @@ function Trends({ T, nav, onPeriod, period }) {
   );
 }
 
-Object.assign(window, { Overview, Breakdown, Trends, BreakdownHero });
+// Brand Trends — one level below Category Trends: the brands inside a category,
+// ranked by spend. Tap a brand to see its transactions.
+function BrandTrends({ T, nav, onPeriod, period, showLogos, id }) {
+  const scoped = D().forPeriod(period);
+  const cat = scoped.CATEGORY_SPEND.find((c) => c.id === id) || scoped.CATEGORY_SPEND[0];
+  const brands = [...(cat.brands || [])].sort((a, b) => b.total - a.total);
+  const peak = brands.length ? brands[0].total : 1;
+  const openBrand = (b) => nav.openTxnList({ title: b.name, subtitle: `in ${cat.name}`, txns: window.EXP_DATA.txnsForBrand(cat.id, b.name) });
+  return (
+    <Screen T={T}>
+      <AppHeader T={T} title="Brand trends" eyebrow={cat.name} onBack={() => nav.pop()} period={period} onPeriod={onPeriod} />
+      <div style={{ marginTop: 18 }}>
+        <Card T={T} pad={20}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 13, marginBottom: 18 }}>
+            <CategoryMark glyph={cat.glyph} color={cat.color} dark={T.dark} size={46} solid />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 24, fontWeight: 720, color: T.ink, letterSpacing: '-0.025em', fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: T.muted, marginRight: 4 }}>AED</span>{fmtAED(cat.total)}
+              </div>
+              <div style={{ fontSize: 12.5, color: T.muted, marginTop: 2 }}>{cat.count} transactions · {brands.length} brands</div>
+            </div>
+          </div>
+          <div style={{ fontSize: 13.5, color: T.muted, fontWeight: 540, marginBottom: 16 }}>Brands ranked by spend · tap to drill in</div>
+          <RankedBars data={brands.map((b) => ({ ...b, id: b.name, color: cat.color }))} total={cat.total} max={peak} dark={T.dark} ink={T.ink} muted={T.muted} onBar={(d) => openBrand(d)} />
+        </Card>
+      </div>
+      <SectionTitle T={T}>All brands</SectionTitle>
+      <Card T={T} pad="2px 18px">
+        {brands.map((b, i, a) => (
+          <div key={b.name} onClick={() => openBrand(b)} style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '12px 0', cursor: 'pointer', position: 'relative' }}>
+            <MerchantMark name={b.name} glyph={cat.glyph} catColor={cat.color} showLogos={showLogos} dark={T.dark} size={40} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 15, fontWeight: 560, color: T.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.name}</div>
+              <div style={{ fontSize: 12.5, color: T.muted, marginTop: 2 }}>{b.count} transactions</div>
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: T.ink, fontVariantNumeric: 'tabular-nums' }}>AED {fmtAED(b.total)}</div>
+            {i < a.length - 1 && <div style={{ position: 'absolute', left: 53, right: 0, bottom: 0, height: 1, background: T.faint }} />}
+          </div>
+        ))}
+      </Card>
+    </Screen>
+  );
+}
+
+Object.assign(window, { Overview, Breakdown, Trends, BreakdownHero, BrandTrends });
 
 </script>
 
@@ -2351,13 +2395,8 @@ function ExpensesApp() {
     openFeedback(tx) { setFbTxn(tx); setFbOpen(true); },
     // Tapping a category (pie segment or breakdown tile) opens its transactions,
     // mirroring the SDK (categoryIDForPreview / categoryStagedForPreview → TransactionListView).
-    openCategory(id) {
-      const D = window.EXP_DATA;
-      const cat = D.CATEGORY_SPEND.find((c) => c.id === id);
-      if (!cat) return;
-      setList({ title: cat.name, subtitle: `${cat.count} transactions`, txns: D.txnsForCategory(id) });
-      setListOpen(true);
-    },
+    // Drilling into a category opens its Brand Trends page (not a transactions popup).
+    openCategory(id) { setAnim('fwd'); setStack((s) => [...s, { screen: 'brandTrends', params: { id } }]); },
   }), []);
 
   const top = stack[stack.length - 1];
@@ -2371,6 +2410,7 @@ function ExpensesApp() {
       case 'overview': return <Overview {...common} greeting="Good evening, Layla" />;
       case 'breakdown': return <Breakdown {...common} />;
       case 'trends': return <Trends {...common} />;
+      case 'brandTrends': return <BrandTrends {...common} id={top.params.id} />;
       case 'allTxns': return <AllTransactions {...common} />;
       case 'categories': return <CategoriesGuide {...common} />;
       default: return <Overview {...common} greeting="Good evening, Layla" />;
